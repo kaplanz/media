@@ -26,6 +26,7 @@ pub mod route;
 /// pagination via query parameters.
 #[derive(OpenApi)]
 #[openapi(tags(
+    (name = "media", description = "Any media item, regardless of kind."),
     (name = "books", description = "Reading items."),
     (name = "films", description = "Watched films."),
     (name = "games", description = "Video games."),
@@ -41,6 +42,7 @@ struct Doc;
 /// Returns an error if the TCP listener cannot be bound or the server fails.
 pub async fn serve(db: SqlitePool, addr: SocketAddr, token: Option<String>) -> anyhow::Result<()> {
     let (router, api) = Router::with_openapi(Doc::openapi())
+        .merge(route::media::router())
         .nest("/books", route::books::router())
         .nest("/films", route::films::router())
         .nest("/games", route::games::router())
