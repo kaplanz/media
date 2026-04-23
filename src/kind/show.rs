@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 /// Television show.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Show {
     /// Unique identifier.
@@ -20,6 +21,7 @@ pub struct Show {
 
 /// Request body for creating or updating a television show.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Body {
     /// TMDB ID.

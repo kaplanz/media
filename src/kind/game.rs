@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 /// Video game.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Game {
     /// Unique identifier.
@@ -22,6 +23,7 @@ pub struct Game {
 
 /// Request body for creating or updating a video game.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Body {
     /// TGDB ID.

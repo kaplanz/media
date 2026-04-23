@@ -8,6 +8,7 @@ pub mod show;
 
 /// The kind of a media item.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(tag = "type", content = "item", rename_all = "lowercase")]
 pub enum Kind {
@@ -25,6 +26,7 @@ pub enum Kind {
 
 /// Temporal metadata shared across all media types.
 #[derive(Clone, Copy, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Meta {
     /// Creation timestamp (Unix seconds).
@@ -35,6 +37,7 @@ pub struct Meta {
 
 /// A media record paired with its metadata and tags.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Record {
     /// Resource data.

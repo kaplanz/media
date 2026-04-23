@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 /// Web bookmark.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Link {
     /// Unique identifier.
@@ -16,6 +17,7 @@ pub struct Link {
 
 /// Request body for creating or updating a hyperlink.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Body {
     /// URL.

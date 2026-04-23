@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 /// Watched film.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Film {
     /// Unique identifier.
@@ -20,6 +21,7 @@ pub struct Film {
 
 /// Request body for creating or updating a watched film.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Body {
     /// TMDB ID.

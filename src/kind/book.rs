@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 /// Reading item.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Book {
     /// Unique identifier.
@@ -24,6 +25,7 @@ pub struct Book {
 
 /// Request body for creating or updating a reading item.
 #[derive(Clone, Debug)]
+#[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Body {
     /// ISBN-13.

@@ -2,19 +2,20 @@
 
 use std::collections::HashMap;
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::get;
-use axum::{Json, Router};
 use media::kind::book::{Body, Book};
 use media::kind::{Kind, Meta, Record};
 use sqlx::SqlitePool;
+use utoipa_axum::router::OpenApiRouter as Router;
+use utoipa_axum::routes;
 use uuid::Uuid;
 
 pub fn router() -> Router<SqlitePool> {
     Router::new()
-        .route("/", get(list).post(create))
-        .route("/{id}", get(fetch).put(update).delete(remove))
+        .routes(routes!(list, create))
+        .routes(routes!(fetch, update, remove))
 }
 
 #[derive(sqlx::FromRow)]
@@ -51,6 +52,8 @@ impl Row {
     }
 }
 
+#[utoipa::path(get, path = "/", tag = "books",
+    responses((status = 200, body = Vec<Record>)))]
 async fn list(State(db): State<SqlitePool>) -> Result<Json<Vec<Record>>, StatusCode> {
     let rows = sqlx::query_as::<_, Row>(
         "SELECT books.id, isbn, hcid, title, cover, about, color, \
@@ -88,6 +91,9 @@ async fn list(State(db): State<SqlitePool>) -> Result<Json<Vec<Record>>, StatusC
     Ok(Json(records))
 }
 
+#[utoipa::path(get, path = "/{id}", tag = "books",
+    params(("id" = Uuid, Path)),
+    responses((status = 200, body = Record), (status = 404)))]
 async fn fetch(
     State(db): State<SqlitePool>,
     Path(id): Path<Uuid>,
@@ -116,6 +122,9 @@ async fn fetch(
     Ok(Json(row.into_record(tags)))
 }
 
+#[utoipa::path(post, path = "/", tag = "books",
+    request_body = Body,
+    responses((status = 201, body = Uuid), (status = 500)))]
 async fn create(
     State(db): State<SqlitePool>,
     Json(body): Json<Body>,
@@ -139,6 +148,10 @@ async fn create(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
+#[utoipa::path(put, path = "/{id}", tag = "books",
+    params(("id" = Uuid, Path)),
+    request_body = Body,
+    responses((status = 204), (status = 404)))]
 async fn update(
     State(db): State<SqlitePool>,
     Path(id): Path<Uuid>,
@@ -169,6 +182,9 @@ async fn update(
     })
 }
 
+#[utoipa::path(delete, path = "/{id}", tag = "books",
+    params(("id" = Uuid, Path)),
+    responses((status = 204), (status = 404)))]
 async fn remove(
     State(db): State<SqlitePool>,
     Path(id): Path<Uuid>,
