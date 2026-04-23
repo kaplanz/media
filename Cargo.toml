@@ -1,6 +1,36 @@
 [package]
 name = "media"
 version = "0.1.0"
+authors = ["Zakhary Kaplan <me@zakhary.dev>"]
 edition = "2024"
+description = """
+Media collection API server.
+"""
+documentation = "https://docs.rs/media"
+repository = "https://github.com/kaplanz/media"
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "media"
+
+[[bin]]
+name = "media"
 
 [dependencies]
+advise = "0.1.0"
+anyhow = "1.0.102"
+axum = "0.8.9"
+clap = { version = "4.6.1", features = ["cargo", "derive", "env", "wrap_help"] }
+clap-verbosity-flag = { version = "3.0.4", features = ["tracing"] }
+merge = "0.2.0"
+serde = { version = "1.0.228", features = ["derive"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "uuid"] }
+sysexits = "0.13.0"
+thiserror = "2.0.18"
+tokio = { version = "1.52.1", features = ["full"] }
+toml = "1.1.2"
+tower-http = { version = "0.6.8", features = ["cors", "trace"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+uuid = { version = "1.23.1", features = ["serde", "v4"] }
+xdir = "0.1.0"
