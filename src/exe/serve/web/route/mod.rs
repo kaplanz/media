@@ -8,3 +8,4 @@ pub mod links;
 pub mod media;
 pub mod query;
 pub mod shows;
+pub mod tags;

@@ -44,6 +44,7 @@ pub async fn serve(db: SqlitePool, addr: SocketAddr, token: Option<String>) -> a
     let (router, api) = Router::with_openapi(Doc::openapi())
         .merge(route::all::router())
         .merge(route::media::router())
+        .merge(route::tags::router())
         .nest("/books", route::books::router())
         .nest("/films", route::films::router())
         .nest("/games", route::games::router())
