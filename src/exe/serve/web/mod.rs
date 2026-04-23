@@ -13,6 +13,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter as Router;
+use utoipa_scalar::{Scalar, Servable as _};
 
 mod auth;
 pub mod route;
@@ -57,6 +58,7 @@ pub async fn serve(db: SqlitePool, addr: SocketAddr, token: Option<String>) -> a
                 move || async move { Json((*api).clone()) }
             }),
         )
+        .merge(Scalar::with_url("/docs", (*api).clone()))
         .layer(middleware::from_fn(auth::guard))
         .layer(Extension(token.map(Arc::new)))
         .layer(CorsLayer::permissive())
