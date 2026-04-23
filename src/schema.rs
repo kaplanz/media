@@ -1,0 +1,77 @@
+//! Database schema.
+
+diesel::table! {
+    media (id) {
+        id -> Binary,
+        kind -> Text,
+        created -> BigInt,
+        updated -> BigInt,
+    }
+}
+
+diesel::table! {
+    tags (media, label) {
+        media -> Binary,
+        label -> Text,
+    }
+}
+
+diesel::table! {
+    books (id) {
+        id -> Binary,
+        isbn -> Nullable<Text>,
+        hcid -> Nullable<BigInt>,
+        title -> Text,
+        cover -> Nullable<Text>,
+        about -> Nullable<Text>,
+        color -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    films (id) {
+        id -> Binary,
+        tmdb -> Nullable<BigInt>,
+        title -> Text,
+        year -> Nullable<BigInt>,
+        rated -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
+    games (id) {
+        id -> Binary,
+        tgdb -> Nullable<BigInt>,
+        title -> Text,
+        system -> Nullable<Text>,
+        owned -> BigInt,
+        rated -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
+    links (id) {
+        id -> Binary,
+        url -> Text,
+        title -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    shows (id) {
+        id -> Binary,
+        tmdb -> Nullable<BigInt>,
+        title -> Text,
+        year -> Nullable<BigInt>,
+        rated -> Nullable<BigInt>,
+    }
+}
+
+diesel::joinable!(books -> media (id));
+diesel::joinable!(films -> media (id));
+diesel::joinable!(games -> media (id));
+diesel::joinable!(links -> media (id));
+diesel::joinable!(shows -> media (id));
+diesel::joinable!(tags -> media (media));
+
+diesel::allow_tables_to_appear_in_same_query!(books, films, games, links, shows, media, tags,);
