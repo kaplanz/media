@@ -42,6 +42,7 @@ struct Doc;
 /// Returns an error if the TCP listener cannot be bound or the server fails.
 pub async fn serve(db: SqlitePool, addr: SocketAddr, token: Option<String>) -> anyhow::Result<()> {
     let (router, api) = Router::with_openapi(Doc::openapi())
+        .merge(route::all::router())
         .merge(route::media::router())
         .nest("/books", route::books::router())
         .nest("/films", route::films::router())
