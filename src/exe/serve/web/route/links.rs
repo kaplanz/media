@@ -1,9 +1,10 @@
 //! Link routes.
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use media::kind::link::{Body, Link};
 use media::kind::{Kind, Meta, Record};
@@ -12,10 +13,56 @@ use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
 use uuid::Uuid;
 
+use super::query::Order;
+
 pub fn router() -> Router<SqlitePool> {
     Router::new()
         .routes(routes!(list, create))
         .routes(routes!(fetch, update, remove))
+}
+
+/// Sort field for links.
+#[derive(Clone, Copy, Debug, Default)]
+#[derive(serde::Deserialize)]
+#[derive(utoipa::ToSchema)]
+#[serde(rename_all = "lowercase")]
+enum Sort {
+    /// Sort by title.
+    Title,
+    /// Sort by creation time.
+    #[default]
+    Created,
+    /// Sort by last update time.
+    Updated,
+}
+
+impl Sort {
+    fn as_col(self) -> &'static str {
+        match self {
+            Self::Title => "title",
+            Self::Created => "media.created",
+            Self::Updated => "media.updated",
+        }
+    }
+}
+
+/// Query parameters for listing links.
+#[derive(Clone, Debug, Default)]
+#[derive(serde::Deserialize)]
+#[derive(utoipa::IntoParams)]
+struct Params {
+    /// Search title (case-insensitive substring).
+    q: Option<String>,
+    /// Filter by tag.
+    tag: Option<String>,
+    /// Field to sort by.
+    sort: Option<Sort>,
+    /// Sort direction.
+    order: Option<Order>,
+    /// Maximum number of results.
+    limit: Option<i64>,
+    /// Number of results to skip.
+    offset: Option<i64>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -45,16 +92,54 @@ impl Row {
 }
 
 #[utoipa::path(get, path = "/", tag = "links",
+    params(Params),
     responses((status = 200, body = Vec<Record>)))]
-async fn list(State(db): State<SqlitePool>) -> Result<Json<Vec<Record>>, StatusCode> {
-    let rows = sqlx::query_as::<_, Row>(
+async fn list(
+    State(db): State<SqlitePool>,
+    Query(params): Query<Params>,
+) -> Result<Json<Vec<Record>>, StatusCode> {
+    let sort_col = params.sort.unwrap_or_default().as_col();
+    let order = params.order.unwrap_or_default().as_str();
+
+    let mut sql = String::from(
         "SELECT links.id, url, title, media.created, media.updated \
          FROM links JOIN media ON media.id = links.id",
-    )
-    .fetch_all(&db)
-    .await
-    .inspect_err(|err| tracing::error!("{err}"))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    );
+    let mut conds: Vec<&str> = Vec::new();
+    if params.q.is_some() {
+        conds.push("title LIKE '%' || ? || '%'");
+    }
+    if params.tag.is_some() {
+        conds.push(
+            "EXISTS (SELECT 1 FROM tags \
+             WHERE tags.media = links.id AND tags.label = ?)",
+        );
+    }
+    if !conds.is_empty() {
+        sql.push_str(" WHERE ");
+        sql.push_str(&conds.join(" AND "));
+    }
+    write!(sql, " ORDER BY {sort_col} {order}").unwrap();
+    if params.limit.is_some() {
+        sql.push_str(" LIMIT ? OFFSET ?");
+    }
+
+    let mut stmt = sqlx::query_as::<_, Row>(&sql);
+    if let Some(ref q) = params.q {
+        stmt = stmt.bind(q.as_str());
+    }
+    if let Some(ref tag) = params.tag {
+        stmt = stmt.bind(tag.as_str());
+    }
+    if let Some(limit) = params.limit {
+        stmt = stmt.bind(limit).bind(params.offset.unwrap_or(0));
+    }
+
+    let rows = stmt
+        .fetch_all(&db)
+        .await
+        .inspect_err(|err| tracing::error!("{err}"))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let all_tags = sqlx::query_as::<_, (Uuid, String)>(
         "SELECT tags.media, tags.label \
