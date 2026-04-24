@@ -31,6 +31,14 @@ fn main() -> Exit {
             // media serve
             exe::serve::main(*cli)
         }
+        Command::Dump(cli) => {
+            // media dump
+            exe::dump::main(*cli)
+        }
+        Command::Load(cli) => {
+            // media load
+            exe::load::main(*cli)
+        }
     };
 
     // Return exit status

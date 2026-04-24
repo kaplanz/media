@@ -36,4 +36,10 @@ pub enum Command {
     /// Start the HTTP server.
     #[command(visible_alias = "s")]
     Serve(Box<exe::serve::Cli>),
+    /// Export the media collection.
+    #[command(visible_alias = "export")]
+    Dump(Box<exe::dump::Cli>),
+    /// Import into the media collection.
+    #[command(visible_alias = "import")]
+    Load(Box<exe::load::Cli>),
 }

@@ -21,12 +21,15 @@ cargo build --release
 ## Usage
 
 ```
-media serve [OPTIONS] <DATABASE>
+media <COMMAND> [OPTIONS] <DATABASE>
 ```
 
-### Configuration
+The three subcommands are `serve` (alias `s`), `dump` (alias `export`),
+and `load` (alias `import`).
 
-Configuration is loaded with the following precedence:
+### Serve
+
+Configuration for `serve` is loaded with the following precedence:
 
 1. Command-line flags (`--host`, `--port`, `--token`).
 2. Environment variables (`MEDIA_HOST`, `MEDIA_PORT`, `MEDIA_TOKEN`).
@@ -39,6 +42,24 @@ Config file format:
 host  = "::1"
 port  = 3000
 token = "secret"
+```
+
+### Import and export
+
+The collection can be exported to JSON or SQL and imported back:
+
+```sh
+media dump -f json -o backup.json media.db
+media load -f json -i backup.json media.db
+```
+
+`-f` accepts `json` (default) or `sql`. The `--fmt` alias is also
+accepted. When `-o` / `-i` is omitted or set to `-`, stdout / stdin is
+used, so the commands compose naturally with pipes:
+
+```sh
+media dump -f sql media.db | sqlite3 copy.db
+media dump media.db | media load other.db
 ```
 
 ### API
