@@ -30,4 +30,8 @@ pub struct Cli {
     /// Bearer token required for write operations.
     #[arg(long, env = "MEDIA_TOKEN")]
     pub token: Option<String>,
+
+    /// URL prefix when served behind a reverse proxy.
+    #[arg(long, env = "MEDIA_PREFIX")]
+    pub prefix: Option<String>,
 }

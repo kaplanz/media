@@ -26,6 +26,7 @@ pub fn main(args: Cli) -> crate::err::Result<()> {
         host: args.host,
         port: args.port,
         token: args.token,
+        prefix: args.prefix,
     };
     cfg.merge(crate::cfg::load(&args.config)?);
 
@@ -61,7 +62,7 @@ pub fn main(args: Cli) -> crate::err::Result<()> {
                     .await
                     .context("failed to initialize database")?;
             }
-            web::serve(pool, addr, cfg.token).await
+            web::serve(pool, addr, cfg.token, cfg.prefix).await
         })
         .map_err(Into::into)
 }

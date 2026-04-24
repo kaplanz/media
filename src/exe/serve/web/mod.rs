@@ -41,8 +41,13 @@ struct Doc;
 /// # Errors
 ///
 /// Returns an error if the TCP listener cannot be bound or the server fails.
-pub async fn serve(db: SqlitePool, addr: SocketAddr, token: Option<String>) -> anyhow::Result<()> {
-    let (router, api) = Router::with_openapi(Doc::openapi())
+pub async fn serve(
+    db: SqlitePool,
+    addr: SocketAddr,
+    token: Option<String>,
+    prefix: Option<String>,
+) -> anyhow::Result<()> {
+    let (router, mut api) = Router::with_openapi(Doc::openapi())
         .merge(route::all::router())
         .merge(route::media::router())
         .merge(route::tags::router())
@@ -52,6 +57,10 @@ pub async fn serve(db: SqlitePool, addr: SocketAddr, token: Option<String>) -> a
         .nest("/links", route::links::router())
         .nest("/shows", route::shows::router())
         .split_for_parts();
+
+    if let Some(ref prefix) = prefix {
+        api.servers = Some(vec![utoipa::openapi::Server::new(prefix)]);
+    }
 
     let api = Arc::new(api);
 
