@@ -34,6 +34,9 @@ pub struct Config {
     pub token: Option<String>,
     #[merge(strategy = merge::option::overwrite_none)]
     pub prefix: Option<String>,
+    #[merge(skip)]
+    #[serde(default)]
+    pub docs: bool,
 }
 
 /// Returns the path to the application's configuration file.

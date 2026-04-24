@@ -34,4 +34,8 @@ pub struct Cli {
     /// URL prefix when served behind a reverse proxy.
     #[arg(long, env = "MEDIA_PREFIX")]
     pub prefix: Option<String>,
+
+    /// Enable the documentation endpoint.
+    #[arg(long)]
+    pub docs: bool,
 }

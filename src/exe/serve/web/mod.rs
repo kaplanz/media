@@ -46,6 +46,7 @@ pub async fn serve(
     addr: SocketAddr,
     token: Option<String>,
     prefix: Option<String>,
+    docs: bool,
 ) -> anyhow::Result<()> {
     let (router, mut api) = Router::with_openapi(Doc::openapi())
         .merge(route::all::router())
@@ -64,15 +65,17 @@ pub async fn serve(
 
     let api = Arc::new(api);
 
-    let app = router
-        .route(
-            "/openapi.json",
-            get({
-                let api = Arc::clone(&api);
-                move || async move { Json((*api).clone()) }
-            }),
-        )
-        .merge(Scalar::with_url("/docs", (*api).clone()))
+    let mut app = router.route(
+        "/openapi.json",
+        get({
+            let api = Arc::clone(&api);
+            move || async move { Json((*api).clone()) }
+        }),
+    );
+    if docs {
+        app = app.merge(Scalar::with_url("/docs", (*api).clone()));
+    }
+    let app = app
         .layer(middleware::from_fn(auth::guard))
         .layer(middleware::from_fn(error::handle))
         .layer(Extension(token.map(Arc::new)))
