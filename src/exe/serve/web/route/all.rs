@@ -3,9 +3,7 @@
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::StatusCode;
 use media::kind::book::Book;
 use media::kind::film::Film;
 use media::kind::game::Game;
@@ -18,6 +16,7 @@ use utoipa_axum::routes;
 use uuid::Uuid;
 
 use super::query::Order;
+use crate::axum::extract::{Error, Json};
 
 pub fn router() -> Router<SqlitePool> {
     Router::new().routes(routes!(list))
@@ -154,7 +153,7 @@ impl Row {
 async fn list(
     State(db): State<SqlitePool>,
     Query(params): Query<Params>,
-) -> Result<Json<Vec<Record>>, StatusCode> {
+) -> Result<Json<Vec<Record>>, Error> {
     let sort_col = params.sort.unwrap_or_default().as_col();
     let order = params.order.unwrap_or_default().as_str();
 
@@ -199,14 +198,14 @@ async fn list(
         .fetch_all(&db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(Error::from)?;
 
     let all_tags =
         sqlx::query_as::<_, (Uuid, String)>("SELECT media, label FROM tags ORDER BY label")
             .fetch_all(&db)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
 
     let mut tag_map: HashMap<Uuid, Vec<String>> = HashMap::new();
     for (id, label) in all_tags {

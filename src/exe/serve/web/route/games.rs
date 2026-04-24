@@ -3,8 +3,7 @@
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use media::kind::game::{Body, Game};
 use media::kind::{Kind, Meta, Record};
@@ -14,6 +13,7 @@ use utoipa_axum::routes;
 use uuid::Uuid;
 
 use super::query::Order;
+use crate::axum::extract::{Error, Json, Path};
 
 pub fn router() -> Router<SqlitePool> {
     Router::new()
@@ -106,7 +106,7 @@ impl Row {
 async fn list(
     State(db): State<SqlitePool>,
     Query(params): Query<Params>,
-) -> Result<Json<Vec<Record>>, StatusCode> {
+) -> Result<Json<Vec<Record>>, Error> {
     let sort_col = params.sort.unwrap_or_default().as_col();
     let order = params.order.unwrap_or_default().as_str();
 
@@ -149,7 +149,7 @@ async fn list(
         .fetch_all(&db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(Error::from)?;
 
     let all_tags = sqlx::query_as::<_, (Uuid, String)>(
         "SELECT tags.media, tags.label \
@@ -159,7 +159,7 @@ async fn list(
     .fetch_all(&db)
     .await
     .inspect_err(|err| tracing::error!("{err}"))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(Error::from)?;
 
     let mut tag_map: HashMap<Uuid, Vec<String>> = HashMap::new();
     for (id, label) in all_tags {
@@ -180,10 +180,7 @@ async fn list(
 #[utoipa::path(get, path = "/{id}", tag = "games",
     params(("id" = Uuid, Path)),
     responses((status = 200, body = Record), (status = 404)))]
-async fn fetch(
-    State(db): State<SqlitePool>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<Record>, StatusCode> {
+async fn fetch(State(db): State<SqlitePool>, Path(id): Path<Uuid>) -> Result<Json<Record>, Error> {
     let row = sqlx::query_as::<_, Row>(
         "SELECT games.id, tgdb, title, system, owned, rated, \
          media.created, media.updated \
@@ -194,8 +191,8 @@ async fn fetch(
     .fetch_optional(&db)
     .await
     .inspect_err(|err| tracing::error!("{err}"))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .ok_or(StatusCode::NOT_FOUND)?;
+    .map_err(Error::from)?
+    .ok_or(Error::NotFound)?;
 
     let tags =
         sqlx::query_scalar::<_, String>("SELECT label FROM tags WHERE media = ? ORDER BY label")
@@ -203,7 +200,7 @@ async fn fetch(
             .fetch_all(&db)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
 
     Ok(Json(row.into_record(tags)))
 }
@@ -214,7 +211,7 @@ async fn fetch(
 async fn create(
     State(db): State<SqlitePool>,
     Json(body): Json<Body>,
-) -> Result<(StatusCode, Json<Uuid>), StatusCode> {
+) -> Result<(StatusCode, Json<Uuid>), Error> {
     let id = Uuid::new_v4();
     sqlx::query(
         "INSERT INTO games (id, tgdb, title, system, owned, rated) VALUES (?, ?, ?, ?, ?, ?)",
@@ -229,7 +226,7 @@ async fn create(
     .await
     .inspect_err(|err| tracing::error!("{err}"))
     .map(|_| (StatusCode::CREATED, Json(id)))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    .map_err(Error::from)
 }
 
 #[utoipa::path(put, path = "/{id}", tag = "games",
@@ -240,7 +237,7 @@ async fn update(
     State(db): State<SqlitePool>,
     Path(id): Path<Uuid>,
     Json(body): Json<Body>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, Error> {
     sqlx::query(
         "UPDATE games SET tgdb = ?, title = ?, system = ?, owned = ?, rated = ? WHERE id = ?",
     )
@@ -253,12 +250,12 @@ async fn update(
     .execute(&db)
     .await
     .inspect_err(|err| tracing::error!("{err}"))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    .map_err(Error::from)
     .and_then(|res| {
         if res.rows_affected() > 0 {
             Ok(StatusCode::NO_CONTENT)
         } else {
-            Err(StatusCode::NOT_FOUND)
+            Err(Error::NotFound)
         }
     })
 }
@@ -266,21 +263,18 @@ async fn update(
 #[utoipa::path(delete, path = "/{id}", tag = "games",
     params(("id" = Uuid, Path)),
     responses((status = 204), (status = 404)))]
-async fn remove(
-    State(db): State<SqlitePool>,
-    Path(id): Path<Uuid>,
-) -> Result<StatusCode, StatusCode> {
+async fn remove(State(db): State<SqlitePool>, Path(id): Path<Uuid>) -> Result<StatusCode, Error> {
     sqlx::query("DELETE FROM media WHERE id = ?")
         .bind(id)
         .execute(&db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(Error::from)
         .and_then(|res| {
             if res.rows_affected() > 0 {
                 Ok(StatusCode::NO_CONTENT)
             } else {
-                Err(StatusCode::NOT_FOUND)
+                Err(Error::NotFound)
             }
         })
 }

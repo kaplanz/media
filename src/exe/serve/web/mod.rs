@@ -16,6 +16,7 @@ use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_scalar::{Scalar, Servable as _};
 
 mod auth;
+mod error;
 pub mod route;
 
 /// REST API for managing a personal media collection.
@@ -64,6 +65,7 @@ pub async fn serve(db: SqlitePool, addr: SocketAddr, token: Option<String>) -> a
         )
         .merge(Scalar::with_url("/docs", (*api).clone()))
         .layer(middleware::from_fn(auth::guard))
+        .layer(middleware::from_fn(error::handle))
         .layer(Extension(token.map(Arc::new)))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())

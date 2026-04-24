@@ -1,8 +1,6 @@
 //! Root media routes.
 
-use axum::Json;
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::extract::State;
 use media::kind::book::Book;
 use media::kind::film::Film;
 use media::kind::game::Game;
@@ -13,6 +11,8 @@ use sqlx::SqlitePool;
 use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
 use uuid::Uuid;
+
+use crate::axum::extract::{Error, Json, Path};
 
 pub fn router() -> Router<SqlitePool> {
     Router::new().routes(routes!(fetch))
@@ -63,10 +63,7 @@ struct ShowRow {
     params(("id" = Uuid, Path)),
     responses((status = 200, body = Record), (status = 404)))]
 #[expect(clippy::too_many_lines)]
-async fn fetch(
-    State(db): State<SqlitePool>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<Record>, StatusCode> {
+async fn fetch(State(db): State<SqlitePool>, Path(id): Path<Uuid>) -> Result<Json<Record>, Error> {
     let (kind, created, updated) = sqlx::query_as::<_, (String, i64, i64)>(
         "SELECT kind, created, updated FROM media WHERE id = ?",
     )
@@ -74,8 +71,8 @@ async fn fetch(
     .fetch_optional(&db)
     .await
     .inspect_err(|err| tracing::error!("{err}"))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .ok_or(StatusCode::NOT_FOUND)?;
+    .map_err(Error::from)?
+    .ok_or(Error::NotFound)?;
 
     let item = match kind.as_str() {
         "book" => {
@@ -86,7 +83,7 @@ async fn fetch(
             .fetch_one(&db)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
             Kind::Book(Book {
                 id,
                 isbn: row.isbn,
@@ -105,7 +102,7 @@ async fn fetch(
             .fetch_one(&db)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
             Kind::Film(Film {
                 id,
                 tmdb: row.tmdb,
@@ -122,7 +119,7 @@ async fn fetch(
             .fetch_one(&db)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
             Kind::Game(Game {
                 id,
                 tgdb: row.tgdb,
@@ -138,7 +135,7 @@ async fn fetch(
                 .fetch_one(&db)
                 .await
                 .inspect_err(|err| tracing::error!("{err}"))
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                .map_err(Error::from)?;
             Kind::Link(Link {
                 id,
                 url: row.url,
@@ -153,7 +150,7 @@ async fn fetch(
             .fetch_one(&db)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
             Kind::Show(Show {
                 id,
                 tmdb: row.tmdb,
@@ -162,7 +159,7 @@ async fn fetch(
                 rated: row.rated,
             })
         }
-        _ => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+        _ => return Err(Error::NotFound),
     };
 
     let tags =
@@ -171,7 +168,7 @@ async fn fetch(
             .fetch_all(&db)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
 
     Ok(Json(Record {
         item,

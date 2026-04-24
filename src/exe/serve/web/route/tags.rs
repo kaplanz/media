@@ -2,8 +2,7 @@
 
 use std::collections::HashMap;
 
-use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::State;
 use axum::http::StatusCode;
 use media::kind::book::Book;
 use media::kind::film::Film;
@@ -16,6 +15,8 @@ use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
 use uuid::Uuid;
 
+use crate::axum::extract::{Error, Json, Path};
+
 pub fn router() -> Router<SqlitePool> {
     Router::new()
         .routes(routes!(all))
@@ -26,12 +27,12 @@ pub fn router() -> Router<SqlitePool> {
 
 #[utoipa::path(get, path = "/tags", tag = "media",
     responses((status = 200, body = Vec<String>)))]
-async fn all(State(db): State<SqlitePool>) -> Result<Json<Vec<String>>, StatusCode> {
+async fn all(State(db): State<SqlitePool>) -> Result<Json<Vec<String>>, Error> {
     sqlx::query_scalar::<_, String>("SELECT DISTINCT label FROM tags ORDER BY label")
         .fetch_all(&db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(Error::from)
         .map(Json)
 }
 
@@ -41,7 +42,7 @@ async fn all(State(db): State<SqlitePool>) -> Result<Json<Vec<String>>, StatusCo
 async fn fetch(
     State(db): State<SqlitePool>,
     Path(tag): Path<String>,
-) -> Result<Json<Vec<Record>>, StatusCode> {
+) -> Result<Json<Vec<Record>>, Error> {
     let rows = sqlx::query_as::<_, Row>(
         "SELECT media.id, media.kind, media.created, media.updated, \
          books.isbn, books.hcid, books.title AS book_title, \
@@ -67,7 +68,11 @@ async fn fetch(
     .fetch_all(&db)
     .await
     .inspect_err(|err| tracing::error!("{err}"))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(Error::from)?;
+
+    if rows.is_empty() {
+        return Err(Error::NotFound);
+    }
 
     let all_tags = sqlx::query_as::<_, (Uuid, String)>(
         "SELECT media, label FROM tags \
@@ -78,7 +83,7 @@ async fn fetch(
     .fetch_all(&db)
     .await
     .inspect_err(|err| tracing::error!("{err}"))
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(Error::from)?;
 
     let mut tag_map: HashMap<Uuid, Vec<String>> = HashMap::new();
     for (id, label) in all_tags {
@@ -177,13 +182,13 @@ impl Row {
     }
 }
 
-async fn exists(db: &SqlitePool, id: Uuid) -> Result<bool, StatusCode> {
+async fn exists(db: &SqlitePool, id: Uuid) -> Result<bool, Error> {
     sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM media WHERE id = ?)")
         .bind(id)
         .fetch_one(db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(Error::from)
 }
 
 #[utoipa::path(get, path = "/{id}/tags", tag = "media",
@@ -192,16 +197,16 @@ async fn exists(db: &SqlitePool, id: Uuid) -> Result<bool, StatusCode> {
 async fn list(
     State(db): State<SqlitePool>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Vec<String>>, StatusCode> {
+) -> Result<Json<Vec<String>>, Error> {
     if !exists(&db, id).await? {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(Error::NotFound);
     }
     sqlx::query_scalar::<_, String>("SELECT label FROM tags WHERE media = ? ORDER BY label")
         .bind(id)
         .fetch_all(&db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(Error::from)
         .map(Json)
 }
 
@@ -213,21 +218,21 @@ async fn set(
     State(db): State<SqlitePool>,
     Path(id): Path<Uuid>,
     Json(labels): Json<Vec<String>>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, Error> {
     if !exists(&db, id).await? {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(Error::NotFound);
     }
     let mut tx = db
         .begin()
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(Error::from)?;
     sqlx::query("DELETE FROM tags WHERE media = ?")
         .bind(id)
         .execute(&mut *tx)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(Error::from)?;
     for label in &labels {
         sqlx::query("INSERT INTO tags (media, label) VALUES (?, ?)")
             .bind(id)
@@ -235,12 +240,12 @@ async fn set(
             .execute(&mut *tx)
             .await
             .inspect_err(|err| tracing::error!("{err}"))
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(Error::from)?;
     }
     tx.commit()
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(Error::from)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -252,9 +257,9 @@ async fn add(
     State(db): State<SqlitePool>,
     Path(id): Path<Uuid>,
     Json(label): Json<String>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, Error> {
     if !exists(&db, id).await? {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(Error::NotFound);
     }
     sqlx::query("INSERT OR IGNORE INTO tags (media, label) VALUES (?, ?)")
         .bind(id)
@@ -262,7 +267,7 @@ async fn add(
         .execute(&db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(Error::from)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -272,19 +277,19 @@ async fn add(
 async fn remove(
     State(db): State<SqlitePool>,
     Path((id, label)): Path<(Uuid, String)>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, Error> {
     sqlx::query("DELETE FROM tags WHERE media = ? AND label = ?")
         .bind(id)
         .bind(&label)
         .execute(&db)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(Error::from)
         .and_then(|res| {
             if res.rows_affected() > 0 {
                 Ok(StatusCode::NO_CONTENT)
             } else {
-                Err(StatusCode::NOT_FOUND)
+                Err(Error::NotFound)
             }
         })
 }

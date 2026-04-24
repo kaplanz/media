@@ -9,6 +9,7 @@ use clap::Parser;
 use crate::cli::{Cli, Command};
 use crate::err::{Exit, Result};
 
+pub mod axum;
 pub mod cfg;
 pub mod cli;
 pub mod dir;
