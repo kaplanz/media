@@ -27,6 +27,7 @@ pub fn main(args: Cli) -> crate::err::Result<()> {
         .build()
         .context("failed to build runtime")?
         .block_on(async {
+            let init = !args.db.exists();
             let opts = SqliteConnectOptions::new()
                 .filename(&args.db)
                 .create_if_missing(true)
@@ -35,6 +36,12 @@ pub fn main(args: Cli) -> crate::err::Result<()> {
             let pool = SqlitePool::connect_with(opts)
                 .await
                 .with_context(|| format!("failed to open {}", args.db.display()))?;
+            if init {
+                sqlx::raw_sql(include_str!("../../../sql/main.sql"))
+                    .execute(&pool)
+                    .await
+                    .context("failed to initialize database")?;
+            }
 
             let reader: BufReader<Either<File, Stdin>> =
                 BufReader::new(match args.input.as_deref() {
