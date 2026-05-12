@@ -78,10 +78,8 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                         diesel::insert_into(games::table)
                             .values((
                                 games::id.eq(uid),
-                                games::tgdb.eq(g.tgdb),
                                 games::title.eq(&g.title),
                                 games::system.eq(&g.system),
-                                games::owned.eq(g.owned),
                                 games::rated.eq(g.rated),
                             ))
                             .on_conflict_do_nothing()

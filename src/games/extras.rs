@@ -1,13 +1,13 @@
-//! Video game.
+//! Game accessory types.
 
 use uuid::Uuid;
 
-/// Video game.
+/// Game accessory.
 #[derive(Clone, Debug)]
 #[derive(diesel::Queryable)]
 #[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct Game {
+pub struct Extras {
     /// Unique identifier.
     #[diesel(deserialize_as = crate::Uuid)]
     pub id: Uuid,
@@ -15,12 +15,14 @@ pub struct Game {
     pub title: String,
     /// Platform.
     pub system: Option<String>,
-    /// Rating (1-5).
-    pub rated: Option<i64>,
-}
-
-impl Game {
-    pub const KIND: crate::Kind = crate::Kind::Game;
+    /// Model name.
+    pub model: Option<String>,
+    /// Hardware revision.
+    pub revision: Option<String>,
+    /// Serial number.
+    pub serial: Option<String>,
+    /// Variation.
+    pub variation: Option<String>,
 }
 
 /// Request body.
@@ -32,6 +34,12 @@ pub struct Body {
     pub title: String,
     /// Platform.
     pub system: Option<String>,
-    /// Rating (1-5).
-    pub rated: Option<i64>,
+    /// Model name.
+    pub model: Option<String>,
+    /// Hardware revision.
+    pub revision: Option<String>,
+    /// Serial number.
+    pub serial: Option<String>,
+    /// Variation.
+    pub variation: Option<String>,
 }

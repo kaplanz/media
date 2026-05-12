@@ -47,6 +47,7 @@ pub enum Format {
 
 impl Format {
     /// Infers the format from a file extension, defaulting to JSON.
+    #[must_use]
     pub fn infer(path: Option<&std::path::Path>) -> Self {
         path.and_then(|p| p.extension())
             .and_then(|e| e.to_str())

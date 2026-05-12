@@ -1,5 +1,9 @@
 //! Game routes.
 
+pub mod extras;
+pub mod owned;
+pub mod system;
+
 use axum::Extension;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -208,10 +212,8 @@ async fn create(
             diesel::insert_into(games::table)
                 .values((
                     games::id.eq(uid),
-                    games::tgdb.eq(body.tgdb),
                     games::title.eq(&body.title),
                     games::system.eq(&body.system),
-                    games::owned.eq(body.owned.unwrap_or(0)),
                     games::rated.eq(body.rated),
                 ))
                 .execute(conn)
@@ -245,10 +247,8 @@ async fn update(
     let uid = DbUuid::from(id);
     let n = diesel::update(games::table.filter(games::id.eq(uid)))
         .set((
-            games::tgdb.eq(body.tgdb),
             games::title.eq(&body.title),
             games::system.eq(&body.system),
-            games::owned.eq(body.owned.unwrap_or(0)),
             games::rated.eq(body.rated),
         ))
         .execute(&mut conn)

@@ -41,10 +41,8 @@ diesel::table! {
 diesel::table! {
     games (id) {
         id -> Binary,
-        tgdb -> Nullable<BigInt>,
         title -> Text,
         system -> Nullable<Text>,
-        owned -> BigInt,
         rated -> Nullable<BigInt>,
     }
 }
@@ -67,11 +65,57 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    games_system (id) {
+        id -> Binary,
+        title -> Text,
+        system -> Nullable<Text>,
+        model -> Nullable<Text>,
+        revision -> Nullable<Text>,
+        serial -> Nullable<Text>,
+        variation -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    games_owned (id) {
+        id -> Binary,
+        game -> Binary,
+        system -> Nullable<Text>,
+        model -> Nullable<Text>,
+        revision -> Nullable<Text>,
+        serial -> Nullable<Text>,
+        cib -> BigInt,
+    }
+}
+
+diesel::table! {
+    games_extras (id) {
+        id -> Binary,
+        title -> Text,
+        system -> Nullable<Text>,
+        model -> Nullable<Text>,
+        revision -> Nullable<Text>,
+        serial -> Nullable<Text>,
+        variation -> Nullable<Text>,
+    }
+}
+
 diesel::joinable!(books -> media (id));
 diesel::joinable!(films -> media (id));
 diesel::joinable!(games -> media (id));
+diesel::joinable!(games_owned -> games (game));
 diesel::joinable!(links -> media (id));
 diesel::joinable!(shows -> media (id));
 diesel::joinable!(tags -> media (media));
 
-diesel::allow_tables_to_appear_in_same_query!(books, films, games, links, shows, media, tags,);
+diesel::allow_tables_to_appear_in_same_query!(
+    books,
+    films,
+    games,
+    games_owned,
+    links,
+    shows,
+    media,
+    tags,
+);
