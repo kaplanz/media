@@ -8,6 +8,7 @@ use anyhow::Context;
 use either::Either;
 
 pub use self::cli::{Cli, Format};
+pub use self::fmt::json::Dump;
 use crate::db::{self, Pool};
 
 mod cli;

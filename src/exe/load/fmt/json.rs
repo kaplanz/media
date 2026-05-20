@@ -8,15 +8,26 @@ use diesel::prelude::*;
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use either::Either;
-use media::{Item, Record};
+use media::Item;
 
 use crate::db::{self, Pool, Uuid as DbUuid};
-use crate::schema::{books, films, games, links, media as m, shows, tags};
+use crate::exe::dump::Dump;
+use crate::schema::{
+    books,
+    films,
+    games,
+    games_extras,
+    games_owned,
+    games_system,
+    links,
+    media as m,
+    shows,
+    tags,
+};
 
 #[allow(clippy::too_many_lines)]
 pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow::Result<()> {
-    let records: Vec<Record<Item>> =
-        serde_json::from_reader(reader).context("failed to parse JSON")?;
+    let dump: Dump = serde_json::from_reader(reader).context("failed to parse JSON")?;
 
     let mut conn = db::get_conn(pool)
         .await
@@ -24,7 +35,7 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
 
     conn.transaction(|conn| {
         async move {
-            for record in &records {
+            for record in &dump.media {
                 let (kind, id) = match &record.item {
                     Item::Book(b) => ("book", b.id),
                     Item::Film(f) => ("film", f.id),
@@ -120,6 +131,55 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                         .await?;
                 }
             }
+
+            for s in &dump.games.system {
+                diesel::insert_into(games_system::table)
+                    .values((
+                        games_system::id.eq(DbUuid::from(s.id)),
+                        games_system::title.eq(&s.title),
+                        games_system::system.eq(&s.system),
+                        games_system::model.eq(&s.model),
+                        games_system::revision.eq(&s.revision),
+                        games_system::serial.eq(&s.serial),
+                        games_system::variation.eq(&s.variation),
+                    ))
+                    .on_conflict_do_nothing()
+                    .execute(conn)
+                    .await?;
+            }
+
+            for o in &dump.games.owned {
+                diesel::insert_into(games_owned::table)
+                    .values((
+                        games_owned::id.eq(DbUuid::from(o.id)),
+                        games_owned::game.eq(DbUuid::from(o.game)),
+                        games_owned::system.eq(&o.system),
+                        games_owned::model.eq(&o.model),
+                        games_owned::revision.eq(&o.revision),
+                        games_owned::serial.eq(&o.serial),
+                        games_owned::cib.eq(o.cib),
+                    ))
+                    .on_conflict_do_nothing()
+                    .execute(conn)
+                    .await?;
+            }
+
+            for e in &dump.games.extras {
+                diesel::insert_into(games_extras::table)
+                    .values((
+                        games_extras::id.eq(DbUuid::from(e.id)),
+                        games_extras::title.eq(&e.title),
+                        games_extras::system.eq(&e.system),
+                        games_extras::model.eq(&e.model),
+                        games_extras::revision.eq(&e.revision),
+                        games_extras::serial.eq(&e.serial),
+                        games_extras::variation.eq(&e.variation),
+                    ))
+                    .on_conflict_do_nothing()
+                    .execute(conn)
+                    .await?;
+            }
+
             Ok::<(), diesel::result::Error>(())
         }
         .scope_boxed()

@@ -11,13 +11,52 @@ use either::Either;
 use media::book::Book;
 use media::film::Film;
 use media::game::Game;
+use media::games::extras::Extras;
+use media::games::owned::Owned;
+use media::games::system::System;
 use media::link::Link;
 use media::show::Show;
 use media::{Item, Meta, Record};
 use uuid::Uuid;
 
 use crate::db::{self, Pool, Uuid as DbUuid};
-use crate::schema::{books, films, games, links, media as m, shows, tags};
+use crate::schema::{
+    books,
+    films,
+    games,
+    games_extras,
+    games_owned,
+    games_system,
+    links,
+    media as m,
+    shows,
+    tags,
+};
+
+/// Top-level dump payload.
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct Dump {
+    pub media: Vec<Record<Item>>,
+    #[serde(default, skip_serializing_if = "Games::is_empty")]
+    pub games: Games,
+}
+
+/// Game subcollections.
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+pub struct Games {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub system: Vec<System>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owned: Vec<Owned>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extras: Vec<Extras>,
+}
+
+impl Games {
+    fn is_empty(&self) -> bool {
+        self.system.is_empty() && self.owned.is_empty() && self.extras.is_empty()
+    }
+}
 
 #[allow(clippy::too_many_lines)]
 pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyhow::Result<()> {
@@ -122,7 +161,7 @@ pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyho
         tags.entry(uid.into()).or_default().push(label);
     }
 
-    let records: Vec<Record<Item>> = rows
+    let media: Vec<Record<Item>> = rows
         .into_iter()
         .filter_map(|(uid, _, created, updated)| {
             let id: Uuid = uid.into();
@@ -136,7 +175,37 @@ pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyho
         })
         .collect();
 
-    serde_json::to_writer_pretty(&mut out, &records).context("failed to serialize")?;
+    let system: Vec<System> = games_system::table
+        .select(games_system::all_columns)
+        .order_by(games_system::title.asc())
+        .load(&mut conn)
+        .await
+        .context("failed to query games_system")?;
+
+    let owned: Vec<Owned> = games_owned::table
+        .select(games_owned::all_columns)
+        .order_by(games_owned::game.asc())
+        .load(&mut conn)
+        .await
+        .context("failed to query games_owned")?;
+
+    let extras: Vec<Extras> = games_extras::table
+        .select(games_extras::all_columns)
+        .order_by(games_extras::title.asc())
+        .load(&mut conn)
+        .await
+        .context("failed to query games_extras")?;
+
+    let dump = Dump {
+        media,
+        games: Games {
+            system,
+            owned,
+            extras,
+        },
+    };
+
+    serde_json::to_writer_pretty(&mut out, &dump).context("failed to serialize")?;
     writeln!(out)?;
     Ok(())
 }
