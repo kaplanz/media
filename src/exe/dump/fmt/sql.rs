@@ -31,7 +31,9 @@ pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyho
 
     let tables: Vec<Name> = diesel::sql_query(
         "SELECT name FROM sqlite_master \
-         WHERE type = 'table' AND name NOT LIKE 'sqlite_%' \
+         WHERE type = 'table' \
+            AND name NOT LIKE 'sqlite_%' \
+            AND name NOT LIKE '\\_\\_%' ESCAPE '\\' \
          ORDER BY rowid",
     )
     .load(&mut conn)
@@ -62,7 +64,7 @@ pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyho
             .join(" || ', ' || ");
 
         let rows: Vec<Stmt> = diesel::sql_query(format!(
-            "SELECT 'INSERT INTO \"{table}\" ({col_list}) VALUES (' \
+            "SELECT 'INSERT OR IGNORE INTO \"{table}\" ({col_list}) VALUES (' \
              || {quoted} || ');' AS stmt FROM \"{table}\""
         ))
         .load(&mut conn)
