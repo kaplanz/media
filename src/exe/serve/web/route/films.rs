@@ -39,7 +39,7 @@ enum Sort {
     /// Sort by release year.
     Year,
     /// Sort by rating.
-    Rated,
+    Rating,
     /// Sort by creation time.
     #[default]
     Created,
@@ -110,8 +110,8 @@ async fn list(
             (Sort::Title, Order::Desc) => query.order_by(films::title.desc()),
             (Sort::Year, Order::Asc) => query.order_by(films::year.asc()),
             (Sort::Year, Order::Desc) => query.order_by(films::year.desc()),
-            (Sort::Rated, Order::Asc) => query.order_by(films::rated.asc()),
-            (Sort::Rated, Order::Desc) => query.order_by(films::rated.desc()),
+            (Sort::Rating, Order::Asc) => query.order_by(films::rating.asc()),
+            (Sort::Rating, Order::Desc) => query.order_by(films::rating.desc()),
             (Sort::Created, Order::Asc) => query.order_by(m::created.asc()),
             (Sort::Created, Order::Desc) => query.order_by(m::created.desc()),
             (Sort::Updated, Order::Asc) => query.order_by(m::updated.asc()),
@@ -215,7 +215,7 @@ async fn create(
                     films::tmdb.eq(body.tmdb),
                     films::title.eq(&body.title),
                     films::year.eq(body.year),
-                    films::rated.eq(body.rated),
+                    films::rating.eq(body.rating),
                 ))
                 .execute(conn)
                 .await?;
@@ -251,7 +251,7 @@ async fn update(
             films::tmdb.eq(body.tmdb),
             films::title.eq(&body.title),
             films::year.eq(body.year),
-            films::rated.eq(body.rated),
+            films::rating.eq(body.rating),
         ))
         .execute(&mut conn)
         .await
@@ -312,7 +312,7 @@ async fn modify(
                 body.tmdb.map(|v| films::tmdb.eq(v)),
                 body.title.map(|v| films::title.eq(v)),
                 body.year.map(|v| films::year.eq(v)),
-                body.rated.map(|v| films::rated.eq(v)),
+                body.rating.map(|v| films::rating.eq(v)),
             ))
             .execute(&mut conn)
             .await

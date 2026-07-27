@@ -34,7 +34,7 @@ diesel::table! {
         tmdb -> Nullable<BigInt>,
         title -> Text,
         year -> Nullable<BigInt>,
-        rated -> Nullable<BigInt>,
+        rating -> Nullable<BigInt>,
     }
 }
 
@@ -43,7 +43,7 @@ diesel::table! {
         id -> Binary,
         title -> Text,
         system -> Nullable<Text>,
-        rated -> Nullable<BigInt>,
+        rating -> Nullable<BigInt>,
     }
 }
 
@@ -61,7 +61,7 @@ diesel::table! {
         tmdb -> Nullable<BigInt>,
         title -> Text,
         year -> Nullable<BigInt>,
-        rated -> Nullable<BigInt>,
+        rating -> Nullable<BigInt>,
     }
 }
 
@@ -70,10 +70,13 @@ diesel::table! {
         id -> Binary,
         title -> Text,
         system -> Nullable<Text>,
+        region -> Nullable<Text>,
         model -> Nullable<Text>,
         revision -> Nullable<Text>,
         serial -> Nullable<Text>,
-        variation -> Nullable<Text>,
+        variant -> Nullable<Text>,
+        complete -> Bool,
+        modified -> Bool,
     }
 }
 
@@ -82,10 +85,12 @@ diesel::table! {
         id -> Binary,
         game -> Binary,
         system -> Nullable<Text>,
+        region -> Nullable<Text>,
         model -> Nullable<Text>,
         revision -> Nullable<Text>,
         serial -> Nullable<Text>,
-        cib -> BigInt,
+        complete -> Bool,
+        modified -> Bool,
     }
 }
 
@@ -94,10 +99,13 @@ diesel::table! {
         id -> Binary,
         title -> Text,
         system -> Nullable<Text>,
+        region -> Nullable<Text>,
         model -> Nullable<Text>,
         revision -> Nullable<Text>,
         serial -> Nullable<Text>,
-        variation -> Nullable<Text>,
+        variant -> Nullable<Text>,
+        complete -> Bool,
+        modified -> Bool,
     }
 }
 

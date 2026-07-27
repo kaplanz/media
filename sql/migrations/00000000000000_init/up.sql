@@ -80,51 +80,61 @@ CREATE TABLE games (
     -- Platform
     system  TEXT,
     -- Activity
-    rated   INTEGER CHECK(rated BETWEEN 1 AND 5)
+    rating  INTEGER CHECK(rating BETWEEN 1 AND 5)
 ) STRICT;
 
 -- Owned
 CREATE TABLE games_owned (
     -- Identity
-    id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
-    game    BLOB NOT NULL REFERENCES games(id)
+    id       BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
+    game     BLOB NOT NULL REFERENCES games(id)
         ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     -- Platform
-    system  TEXT,
+    system   TEXT,
+    region   TEXT CHECK(region IS NULL OR length(region) = 2),
     -- Hardware
-    model   TEXT,
+    model    TEXT,
     revision TEXT,
-    serial  TEXT,
+    serial   TEXT,
     -- Collection
-    cib     INTEGER NOT NULL DEFAULT 0
+    complete INTEGER NOT NULL DEFAULT 0 CHECK(complete IN (0, 1)),
+    modified INTEGER NOT NULL DEFAULT 0 CHECK(modified IN (0, 1))
 ) STRICT;
 
 -- Systems
 CREATE TABLE games_system (
     -- Identity
-    id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
-    title   TEXT NOT NULL,
+    id       BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
+    title    TEXT NOT NULL,
     -- Platform
-    system  TEXT,
+    system   TEXT,
+    region   TEXT CHECK(region IS NULL OR length(region) = 2),
     -- Hardware
-    model   TEXT,
+    model    TEXT,
     revision TEXT,
-    serial  TEXT,
-    variation TEXT
+    serial   TEXT,
+    variant  TEXT,
+    -- Collection
+    complete INTEGER NOT NULL DEFAULT 0 CHECK(complete IN (0, 1)),
+    modified INTEGER NOT NULL DEFAULT 0 CHECK(modified IN (0, 1))
 ) STRICT;
 
 -- Extras
 CREATE TABLE games_extras (
     -- Identity
-    id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
-    title   TEXT NOT NULL,
+    id       BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
+    title    TEXT NOT NULL,
     -- Platform
-    system  TEXT,
+    system   TEXT,
+    region   TEXT CHECK(region IS NULL OR length(region) = 2),
     -- Hardware
-    model   TEXT,
+    model    TEXT,
     revision TEXT,
-    serial  TEXT,
-    variation TEXT
+    serial   TEXT,
+    variant  TEXT,
+    -- Collection
+    complete INTEGER NOT NULL DEFAULT 0 CHECK(complete IN (0, 1)),
+    modified INTEGER NOT NULL DEFAULT 0 CHECK(modified IN (0, 1))
 ) STRICT;
 
 --
@@ -139,7 +149,7 @@ CREATE TABLE films (
     -- Metadata
     year    INTEGER,
     -- Activity
-    rated   INTEGER CHECK(rated BETWEEN 1 AND 5)
+    rating  INTEGER CHECK(rating BETWEEN 1 AND 5)
 ) STRICT;
 
 --
@@ -154,5 +164,5 @@ CREATE TABLE shows (
     -- Metadata
     year    INTEGER,
     -- Activity
-    rated   INTEGER CHECK(rated BETWEEN 1 AND 5)
+    rating  INTEGER CHECK(rating BETWEEN 1 AND 5)
 ) STRICT;

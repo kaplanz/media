@@ -15,14 +15,20 @@ pub struct Extras {
     pub title: String,
     /// Platform.
     pub system: Option<String>,
+    /// Region code.
+    pub region: Option<String>,
     /// Model name.
     pub model: Option<String>,
     /// Hardware revision.
     pub revision: Option<String>,
     /// Serial number.
     pub serial: Option<String>,
-    /// Variation.
-    pub variation: Option<String>,
+    /// Variant.
+    pub variant: Option<String>,
+    /// Complete-in-box status.
+    pub complete: bool,
+    /// Hardware modification status.
+    pub modified: bool,
 }
 
 /// Request body.
@@ -34,14 +40,20 @@ pub struct Body {
     pub title: String,
     /// Platform.
     pub system: Option<String>,
+    /// Region code.
+    pub region: Option<String>,
     /// Model name.
     pub model: Option<String>,
     /// Hardware revision.
     pub revision: Option<String>,
     /// Serial number.
     pub serial: Option<String>,
-    /// Variation.
-    pub variation: Option<String>,
+    /// Variant.
+    pub variant: Option<String>,
+    /// Complete-in-box status.
+    pub complete: Option<bool>,
+    /// Hardware modification status.
+    pub modified: Option<bool>,
 }
 
 /// Partial request body.
@@ -59,6 +71,9 @@ pub struct Patch {
     /// Platform.
     #[serde(deserialize_with = "crate::patch::present")]
     pub system: Option<Option<String>>,
+    /// Region code.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub region: Option<Option<String>>,
     /// Model name.
     #[serde(deserialize_with = "crate::patch::present")]
     pub model: Option<Option<String>>,
@@ -68,9 +83,15 @@ pub struct Patch {
     /// Serial number.
     #[serde(deserialize_with = "crate::patch::present")]
     pub serial: Option<Option<String>>,
-    /// Variation.
+    /// Variant.
     #[serde(deserialize_with = "crate::patch::present")]
-    pub variation: Option<Option<String>>,
+    pub variant: Option<Option<String>>,
+    /// Complete-in-box status.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub complete: Option<bool>,
+    /// Hardware modification status.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub modified: Option<bool>,
 }
 
 impl Patch {
@@ -79,9 +100,12 @@ impl Patch {
     pub fn is_empty(&self) -> bool {
         self.title.is_none()
             && self.system.is_none()
+            && self.region.is_none()
             && self.model.is_none()
             && self.revision.is_none()
             && self.serial.is_none()
-            && self.variation.is_none()
+            && self.variant.is_none()
+            && self.complete.is_none()
+            && self.modified.is_none()
     }
 }

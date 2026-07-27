@@ -41,7 +41,7 @@ enum Sort {
     /// Sort by title.
     Title,
     /// Sort by rating.
-    Rated,
+    Rating,
     /// Sort by creation time.
     #[default]
     Created,
@@ -110,8 +110,8 @@ async fn list(
         ) {
             (Sort::Title, Order::Asc) => query.order_by(games::title.asc()),
             (Sort::Title, Order::Desc) => query.order_by(games::title.desc()),
-            (Sort::Rated, Order::Asc) => query.order_by(games::rated.asc()),
-            (Sort::Rated, Order::Desc) => query.order_by(games::rated.desc()),
+            (Sort::Rating, Order::Asc) => query.order_by(games::rating.asc()),
+            (Sort::Rating, Order::Desc) => query.order_by(games::rating.desc()),
             (Sort::Created, Order::Asc) => query.order_by(m::created.asc()),
             (Sort::Created, Order::Desc) => query.order_by(m::created.desc()),
             (Sort::Updated, Order::Asc) => query.order_by(m::updated.asc()),
@@ -214,7 +214,7 @@ async fn create(
                     games::id.eq(uid),
                     games::title.eq(&body.title),
                     games::system.eq(&body.system),
-                    games::rated.eq(body.rated),
+                    games::rating.eq(body.rating),
                 ))
                 .execute(conn)
                 .await?;
@@ -249,7 +249,7 @@ async fn update(
         .set((
             games::title.eq(&body.title),
             games::system.eq(&body.system),
-            games::rated.eq(body.rated),
+            games::rating.eq(body.rating),
         ))
         .execute(&mut conn)
         .await
@@ -309,7 +309,7 @@ async fn modify(
             .set((
                 body.title.map(|v| games::title.eq(v)),
                 body.system.map(|v| games::system.eq(v)),
-                body.rated.map(|v| games::rated.eq(v)),
+                body.rating.map(|v| games::rating.eq(v)),
             ))
             .execute(&mut conn)
             .await

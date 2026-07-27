@@ -16,6 +16,8 @@ pub struct Owned {
     pub game: Uuid,
     /// Platform.
     pub system: Option<String>,
+    /// Region code.
+    pub region: Option<String>,
     /// Model name.
     pub model: Option<String>,
     /// Hardware revision.
@@ -23,7 +25,9 @@ pub struct Owned {
     /// Serial number.
     pub serial: Option<String>,
     /// Complete-in-box status.
-    pub cib: i64,
+    pub complete: bool,
+    /// Hardware modification status.
+    pub modified: bool,
 }
 
 /// Request body.
@@ -35,6 +39,8 @@ pub struct Body {
     pub game: Uuid,
     /// Platform.
     pub system: Option<String>,
+    /// Region code.
+    pub region: Option<String>,
     /// Model name.
     pub model: Option<String>,
     /// Hardware revision.
@@ -42,7 +48,9 @@ pub struct Body {
     /// Serial number.
     pub serial: Option<String>,
     /// Complete-in-box status.
-    pub cib: Option<i64>,
+    pub complete: Option<bool>,
+    /// Hardware modification status.
+    pub modified: Option<bool>,
 }
 
 /// Partial request body.
@@ -60,6 +68,9 @@ pub struct Patch {
     /// Platform.
     #[serde(deserialize_with = "crate::patch::present")]
     pub system: Option<Option<String>>,
+    /// Region code.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub region: Option<Option<String>>,
     /// Model name.
     #[serde(deserialize_with = "crate::patch::present")]
     pub model: Option<Option<String>>,
@@ -71,7 +82,10 @@ pub struct Patch {
     pub serial: Option<Option<String>>,
     /// Complete-in-box status.
     #[serde(deserialize_with = "crate::patch::present")]
-    pub cib: Option<i64>,
+    pub complete: Option<bool>,
+    /// Hardware modification status.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub modified: Option<bool>,
 }
 
 impl Patch {
@@ -80,9 +94,11 @@ impl Patch {
     pub fn is_empty(&self) -> bool {
         self.game.is_none()
             && self.system.is_none()
+            && self.region.is_none()
             && self.model.is_none()
             && self.revision.is_none()
             && self.serial.is_none()
-            && self.cib.is_none()
+            && self.complete.is_none()
+            && self.modified.is_none()
     }
 }

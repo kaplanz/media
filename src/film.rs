@@ -18,7 +18,7 @@ pub struct Film {
     /// Release year.
     pub year: Option<i64>,
     /// Rating (1-5).
-    pub rated: Option<i64>,
+    pub rating: Option<i64>,
 }
 
 impl Film {
@@ -37,7 +37,7 @@ pub struct Body {
     /// Release year.
     pub year: Option<i64>,
     /// Rating (1-5).
-    pub rated: Option<i64>,
+    pub rating: Option<i64>,
 }
 
 /// Partial request body.
@@ -60,13 +60,13 @@ pub struct Patch {
     pub year: Option<Option<i64>>,
     /// Rating (1-5).
     #[serde(deserialize_with = "crate::patch::present")]
-    pub rated: Option<Option<i64>>,
+    pub rating: Option<Option<i64>>,
 }
 
 impl Patch {
     /// Returns `true` if no fields are present.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.tmdb.is_none() && self.title.is_none() && self.year.is_none() && self.rated.is_none()
+        self.tmdb.is_none() && self.title.is_none() && self.year.is_none() && self.rating.is_none()
     }
 }

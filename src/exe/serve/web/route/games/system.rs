@@ -148,10 +148,13 @@ async fn create(
             t::id.eq(uid),
             t::title.eq(&body.title),
             t::system.eq(&body.system),
+            t::region.eq(&body.region),
             t::model.eq(&body.model),
             t::revision.eq(&body.revision),
             t::serial.eq(&body.serial),
-            t::variation.eq(&body.variation),
+            t::variant.eq(&body.variant),
+            t::complete.eq(body.complete.unwrap_or(false)),
+            t::modified.eq(body.modified.unwrap_or(false)),
         ))
         .execute(&mut conn)
         .await
@@ -181,10 +184,13 @@ async fn update(
         .set((
             t::title.eq(&body.title),
             t::system.eq(&body.system),
+            t::region.eq(&body.region),
             t::model.eq(&body.model),
             t::revision.eq(&body.revision),
             t::serial.eq(&body.serial),
-            t::variation.eq(&body.variation),
+            t::variant.eq(&body.variant),
+            t::complete.eq(body.complete.unwrap_or(false)),
+            t::modified.eq(body.modified.unwrap_or(false)),
         ))
         .execute(&mut conn)
         .await
@@ -225,10 +231,13 @@ async fn modify(
             .set((
                 body.title.map(|v| t::title.eq(v)),
                 body.system.map(|v| t::system.eq(v)),
+                body.region.map(|v| t::region.eq(v)),
                 body.model.map(|v| t::model.eq(v)),
                 body.revision.map(|v| t::revision.eq(v)),
                 body.serial.map(|v| t::serial.eq(v)),
-                body.variation.map(|v| t::variation.eq(v)),
+                body.variant.map(|v| t::variant.eq(v)),
+                body.complete.map(|v| t::complete.eq(v)),
+                body.modified.map(|v| t::modified.eq(v)),
             ))
             .execute(&mut conn)
             .await

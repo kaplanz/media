@@ -79,7 +79,7 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                                 films::tmdb.eq(f.tmdb),
                                 films::title.eq(&f.title),
                                 films::year.eq(f.year),
-                                films::rated.eq(f.rated),
+                                films::rating.eq(f.rating),
                             ))
                             .on_conflict_do_nothing()
                             .execute(conn)
@@ -91,7 +91,7 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                                 games::id.eq(uid),
                                 games::title.eq(&g.title),
                                 games::system.eq(&g.system),
-                                games::rated.eq(g.rated),
+                                games::rating.eq(g.rating),
                             ))
                             .on_conflict_do_nothing()
                             .execute(conn)
@@ -115,7 +115,7 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                                 shows::tmdb.eq(s.tmdb),
                                 shows::title.eq(&s.title),
                                 shows::year.eq(s.year),
-                                shows::rated.eq(s.rated),
+                                shows::rating.eq(s.rating),
                             ))
                             .on_conflict_do_nothing()
                             .execute(conn)
@@ -138,10 +138,13 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                         games_system::id.eq(DbUuid::from(s.id)),
                         games_system::title.eq(&s.title),
                         games_system::system.eq(&s.system),
+                        games_system::region.eq(&s.region),
                         games_system::model.eq(&s.model),
                         games_system::revision.eq(&s.revision),
                         games_system::serial.eq(&s.serial),
-                        games_system::variation.eq(&s.variation),
+                        games_system::variant.eq(&s.variant),
+                        games_system::complete.eq(s.complete),
+                        games_system::modified.eq(s.modified),
                     ))
                     .on_conflict_do_nothing()
                     .execute(conn)
@@ -154,10 +157,12 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                         games_owned::id.eq(DbUuid::from(o.id)),
                         games_owned::game.eq(DbUuid::from(o.game)),
                         games_owned::system.eq(&o.system),
+                        games_owned::region.eq(&o.region),
                         games_owned::model.eq(&o.model),
                         games_owned::revision.eq(&o.revision),
                         games_owned::serial.eq(&o.serial),
-                        games_owned::cib.eq(o.cib),
+                        games_owned::complete.eq(o.complete),
+                        games_owned::modified.eq(o.modified),
                     ))
                     .on_conflict_do_nothing()
                     .execute(conn)
@@ -170,10 +175,13 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                         games_extras::id.eq(DbUuid::from(e.id)),
                         games_extras::title.eq(&e.title),
                         games_extras::system.eq(&e.system),
+                        games_extras::region.eq(&e.region),
                         games_extras::model.eq(&e.model),
                         games_extras::revision.eq(&e.revision),
                         games_extras::serial.eq(&e.serial),
-                        games_extras::variation.eq(&e.variation),
+                        games_extras::variant.eq(&e.variant),
+                        games_extras::complete.eq(e.complete),
+                        games_extras::modified.eq(e.modified),
                     ))
                     .on_conflict_do_nothing()
                     .execute(conn)

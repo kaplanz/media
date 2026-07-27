@@ -16,7 +16,7 @@ pub struct Game {
     /// Platform.
     pub system: Option<String>,
     /// Rating (1-5).
-    pub rated: Option<i64>,
+    pub rating: Option<i64>,
 }
 
 impl Game {
@@ -33,7 +33,7 @@ pub struct Body {
     /// Platform.
     pub system: Option<String>,
     /// Rating (1-5).
-    pub rated: Option<i64>,
+    pub rating: Option<i64>,
 }
 
 /// Partial request body.
@@ -53,13 +53,13 @@ pub struct Patch {
     pub system: Option<Option<String>>,
     /// Rating (1-5).
     #[serde(deserialize_with = "crate::patch::present")]
-    pub rated: Option<Option<i64>>,
+    pub rating: Option<Option<i64>>,
 }
 
 impl Patch {
     /// Returns `true` if no fields are present.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.title.is_none() && self.system.is_none() && self.rated.is_none()
+        self.title.is_none() && self.system.is_none() && self.rating.is_none()
     }
 }
