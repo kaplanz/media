@@ -8,6 +8,7 @@ pub mod link;
 pub mod show;
 
 mod item;
+mod patch;
 mod uuid;
 
 pub use self::item::{Item, Kind, Meta, Record};

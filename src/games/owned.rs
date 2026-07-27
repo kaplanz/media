@@ -44,3 +44,45 @@ pub struct Body {
     /// Complete-in-box status.
     pub cib: Option<i64>,
 }
+
+/// Partial request body.
+///
+/// Absent fields are left untouched; nullable fields set to `null` are
+/// cleared.
+#[derive(Clone, Debug, Default)]
+#[derive(utoipa::ToSchema)]
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+pub struct Patch {
+    /// Game reference.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub game: Option<Uuid>,
+    /// Platform.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub system: Option<Option<String>>,
+    /// Model name.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub model: Option<Option<String>>,
+    /// Hardware revision.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub revision: Option<Option<String>>,
+    /// Serial number.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub serial: Option<Option<String>>,
+    /// Complete-in-box status.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub cib: Option<i64>,
+}
+
+impl Patch {
+    /// Returns `true` if no fields are present.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.game.is_none()
+            && self.system.is_none()
+            && self.model.is_none()
+            && self.revision.is_none()
+            && self.serial.is_none()
+            && self.cib.is_none()
+    }
+}

@@ -4,7 +4,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use media::games::owned::{Body, Owned};
+use media::games::owned::{Body, Owned, Patch};
 use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
 use uuid::Uuid;
@@ -17,7 +17,7 @@ use crate::schema::games_owned as t;
 pub fn router() -> Router<Pool> {
     Router::new()
         .routes(routes!(list, create))
-        .routes(routes!(fetch, update, remove))
+        .routes(routes!(fetch, update, modify, remove))
 }
 
 /// Sort field for owned game releases.
@@ -187,6 +187,51 @@ async fn update(
         .map_err(Error::from)?;
     if n == 0 {
         return Err(Error::NotFound);
+    }
+    let row = t::table
+        .select(t::all_columns)
+        .filter(t::id.eq(uid))
+        .first::<Owned>(&mut conn)
+        .await
+        .map_err(Error::from)?;
+    Ok(Json(row))
+}
+
+/// Modify an owned game release.
+#[utoipa::path(
+    patch,
+    path = "/{id}",
+    tag = "games/owned",
+    params(("id" = Uuid, Path)),
+    security(("BearerAuth" = [])),
+    request_body(content = inline(Patch)),
+    responses((status = 200, body = Owned), (status = 404)),
+)]
+async fn modify(
+    State(db): State<Pool>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<Patch>,
+) -> Result<Json<Owned>, Error> {
+    let mut conn = db::get_conn(&db).await.map_err(Error::from)?;
+    let uid = DbUuid::from(id);
+    // Apply present fields
+    if !body.is_empty() {
+        let n = diesel::update(t::table.filter(t::id.eq(uid)))
+            .set((
+                body.game.map(|v| t::game.eq(DbUuid::from(v))),
+                body.system.map(|v| t::system.eq(v)),
+                body.model.map(|v| t::model.eq(v)),
+                body.revision.map(|v| t::revision.eq(v)),
+                body.serial.map(|v| t::serial.eq(v)),
+                body.cib.map(|v| t::cib.eq(v)),
+            ))
+            .execute(&mut conn)
+            .await
+            .inspect_err(|err| tracing::error!("{err}"))
+            .map_err(Error::from)?;
+        if n == 0 {
+            return Err(Error::NotFound);
+        }
     }
     let row = t::table
         .select(t::all_columns)

@@ -10,7 +10,7 @@ use axum::http::StatusCode;
 use diesel::prelude::*;
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::{AsyncConnection, RunQueryDsl};
-use media::game::{Body, Game};
+use media::game::{Body, Game, Patch};
 use media::{Item, Meta};
 use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
@@ -26,7 +26,7 @@ type Record = media::Record<Item>;
 pub fn router() -> Router<Pool> {
     Router::new()
         .routes(routes!(list, create))
-        .routes(routes!(fetch, update, remove))
+        .routes(routes!(fetch, update, modify, remove))
         .routes(routes!(list_tags, set_tags))
         .routes(routes!(insert_tag, remove_tag))
         .layer(Extension(media::Kind::Game))
@@ -264,6 +264,67 @@ async fn update(
         .await
         .inspect_err(|err| tracing::error!("{err}"))
         .map_err(Error::from)?;
+    // Load updated item
+    let (game, created, updated) = games::table
+        .inner_join(m::table)
+        .select((games::all_columns, m::created, m::updated))
+        .filter(games::id.eq(uid))
+        .first::<(Game, i64, i64)>(&mut conn)
+        .await
+        .inspect_err(|err| tracing::error!("{err}"))
+        .map_err(Error::from)?;
+    // Load tags
+    let tags = super::tags::load_tags_for(&mut conn, &[uid])
+        .await?
+        .remove(&id)
+        .unwrap_or_default();
+    let item = Item::Game(game);
+    Ok(Json(Record {
+        item,
+        meta: Meta { created, updated },
+        tags,
+    }))
+}
+
+/// Modify a game.
+#[utoipa::path(
+    patch,
+    path = "/{id}",
+    tag = "games",
+    params(("id" = Uuid, Path)),
+    security(("BearerAuth" = [])),
+    request_body(content = inline(Patch)),
+    responses((status = 200, body = inline(Record)), (status = 404)),
+)]
+async fn modify(
+    State(db): State<Pool>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<Patch>,
+) -> Result<Json<Record>, Error> {
+    let mut conn = db::get_conn(&db).await.map_err(Error::from)?;
+    let uid = DbUuid::from(id);
+    // Apply present fields
+    if !body.is_empty() {
+        let n = diesel::update(games::table.filter(games::id.eq(uid)))
+            .set((
+                body.title.map(|v| games::title.eq(v)),
+                body.system.map(|v| games::system.eq(v)),
+                body.rated.map(|v| games::rated.eq(v)),
+            ))
+            .execute(&mut conn)
+            .await
+            .inspect_err(|err| tracing::error!("{err}"))
+            .map_err(Error::from)?;
+        if n == 0 {
+            return Err(Error::NotFound);
+        }
+        diesel::update(m::table.filter(m::id.eq(uid)))
+            .set(m::updated.eq(db::timestamp()))
+            .execute(&mut conn)
+            .await
+            .inspect_err(|err| tracing::error!("{err}"))
+            .map_err(Error::from)?;
+    }
     // Load updated item
     let (game, created, updated) = games::table
         .inner_join(m::table)

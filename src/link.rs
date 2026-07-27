@@ -31,3 +31,28 @@ pub struct Body {
     /// Title.
     pub title: Option<String>,
 }
+
+/// Partial request body.
+///
+/// Absent fields are left untouched; nullable fields set to `null` are
+/// cleared.
+#[derive(Clone, Debug, Default)]
+#[derive(utoipa::ToSchema)]
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+pub struct Patch {
+    /// URL.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub url: Option<String>,
+    /// Title.
+    #[serde(deserialize_with = "crate::patch::present")]
+    pub title: Option<Option<String>>,
+}
+
+impl Patch {
+    /// Returns `true` if no fields are present.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.url.is_none() && self.title.is_none()
+    }
+}

@@ -68,8 +68,8 @@ A machine-readable OpenAPI spec is available at `/openapi.json`. The
 API covers books, films, games, links, and shows with full CRUD support,
 plus tag management and a unified media list across all kinds.
 
-Write endpoints (`POST`, `PUT`, `DELETE`) require the bearer token if
-one is configured.
+Write endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) require the bearer
+token if one is configured.
 
 ## License
 
