@@ -54,6 +54,7 @@ pub async fn serve(
     let (router, mut api) = Router::with_openapi(Doc::openapi())
         .merge(route::router())
         .merge(route::tags::router())
+        .merge(route::logs::router())
         .nest("/books", route::books::router())
         .nest("/films", route::films::router())
         .nest("/games/system", route::games::system::router())

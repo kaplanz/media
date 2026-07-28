@@ -20,6 +20,7 @@ use crate::schema::{
     games_owned,
     games_system,
     links,
+    logs,
     media as m,
     shows,
     tags,
@@ -126,6 +127,19 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                 for label in &record.tags {
                     diesel::insert_into(tags::table)
                         .values((tags::media.eq(uid), tags::label.eq(label)))
+                        .on_conflict_do_nothing()
+                        .execute(conn)
+                        .await?;
+                }
+
+                for log in &record.logs {
+                    diesel::insert_into(logs::table)
+                        .values((
+                            logs::id.eq(DbUuid::from(log.id)),
+                            logs::media.eq(uid),
+                            logs::kind.eq(log.kind),
+                            logs::date.eq(log.date),
+                        ))
                         .on_conflict_do_nothing()
                         .execute(conn)
                         .await?;

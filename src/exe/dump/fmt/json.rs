@@ -15,6 +15,7 @@ use media::games::extras::Extras;
 use media::games::owned::Owned;
 use media::games::system::System;
 use media::link::Link;
+use media::logs::Log;
 use media::show::Show;
 use media::{Item, Meta, Record};
 use uuid::Uuid;
@@ -28,6 +29,7 @@ use crate::schema::{
     games_owned,
     games_system,
     links,
+    logs,
     media as m,
     shows,
     tags,
@@ -161,15 +163,30 @@ pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyho
         tags.entry(uid.into()).or_default().push(label);
     }
 
+    let pairs: Vec<(DbUuid, Log)> = logs::table
+        .filter(logs::media.eq_any(&ids))
+        .select((logs::media, (logs::id, logs::kind, logs::date)))
+        .order_by((logs::media, logs::date))
+        .load(&mut conn)
+        .await
+        .context("failed to query logs")?;
+
+    let mut logs: HashMap<Uuid, Vec<Log>> = HashMap::new();
+    for (uid, log) in pairs {
+        logs.entry(uid.into()).or_default().push(log);
+    }
+
     let media: Vec<Record<Item>> = rows
         .into_iter()
         .filter_map(|(uid, _, created, updated)| {
             let id: Uuid = uid.into();
             let item = items.remove(&id)?;
             let tags = tags.remove(&id).unwrap_or_default();
+            let logs = logs.remove(&id).unwrap_or_default();
             Some(Record {
                 item,
                 meta: Meta { created, updated },
+                logs,
                 tags,
             })
         })

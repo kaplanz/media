@@ -5,6 +5,7 @@ pub mod film;
 pub mod game;
 pub mod games;
 pub mod link;
+pub mod logs;
 pub mod show;
 
 mod item;

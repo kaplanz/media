@@ -4,6 +4,7 @@ use crate::book::Book;
 use crate::film::Film;
 use crate::game::Game;
 use crate::link::Link;
+use crate::logs::Log;
 use crate::show::Show;
 
 /// Media kind.
@@ -80,6 +81,9 @@ pub struct Record<T: utoipa::ToSchema> {
     /// Item metadata.
     #[schema(inline)]
     pub meta: Meta,
+    /// Activity logs.
+    #[serde(default)]
+    pub logs: Vec<Log>,
     /// Applied tags.
     pub tags: Vec<String>,
 }

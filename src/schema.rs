@@ -17,6 +17,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    logs (id) {
+        id -> Binary,
+        media -> Binary,
+        kind -> Text,
+        date -> BigInt,
+    }
+}
+
+diesel::table! {
     books (id) {
         id -> Binary,
         isbn -> Nullable<Text>,
@@ -114,6 +123,7 @@ diesel::joinable!(films -> media (id));
 diesel::joinable!(games -> media (id));
 diesel::joinable!(games_owned -> games (game));
 diesel::joinable!(links -> media (id));
+diesel::joinable!(logs -> media (media));
 diesel::joinable!(shows -> media (id));
 diesel::joinable!(tags -> media (media));
 
@@ -123,6 +133,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     games,
     games_owned,
     links,
+    logs,
     shows,
     media,
     tags,

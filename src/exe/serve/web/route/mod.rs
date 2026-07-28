@@ -4,6 +4,7 @@ pub mod books;
 pub mod films;
 pub mod games;
 pub mod links;
+pub mod logs;
 pub mod query;
 pub mod shows;
 pub mod tags;
@@ -207,6 +208,7 @@ async fn list(
 
     // Load tags
     let mut tags = tags::load_tags_for(&mut conn, &ids).await?;
+    let mut logs = logs::load_logs_for(&mut conn, &ids).await?;
 
     let records = rows
         .into_iter()
@@ -214,9 +216,11 @@ async fn list(
             let id: Uuid = uid.into();
             let item = items.remove(&id)?;
             let tags = tags.remove(&id).unwrap_or_default();
+            let logs = logs.remove(&id).unwrap_or_default();
             Some(Record {
                 item,
                 meta: Meta { created, updated },
+                logs,
                 tags,
             })
         })
@@ -299,10 +303,15 @@ async fn fetch(State(db): State<Pool>, Path(id): Path<Uuid>) -> Result<Json<Reco
         .await?
         .remove(&id)
         .unwrap_or_default();
+    let logs = logs::load_logs_for(&mut conn, &[uid])
+        .await?
+        .remove(&id)
+        .unwrap_or_default();
 
     Ok(Json(Record {
         item,
         meta: Meta { created, updated },
+        logs,
         tags,
     }))
 }

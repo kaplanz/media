@@ -7,6 +7,7 @@ use diesel::prelude::*;
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use media::book::{Body, Book, Patch};
+use media::logs::Log;
 use media::{Item, Meta};
 use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
@@ -25,6 +26,8 @@ pub fn router() -> Router<Pool> {
         .routes(routes!(fetch, update, modify, remove))
         .routes(routes!(list_tags, set_tags))
         .routes(routes!(insert_tag, remove_tag))
+        .routes(routes!(list_logs, set_logs, insert_log))
+        .routes(routes!(remove_log))
         .layer(Extension(media::Kind::Book))
 }
 
@@ -124,15 +127,18 @@ async fn list(
     // Load tags
     let ids: Vec<DbUuid> = rows.iter().map(|(b, _, _)| b.id.into()).collect();
     let mut tags = super::tags::load_tags_for(&mut conn, &ids).await?;
+    let mut logs = super::logs::load_logs_for(&mut conn, &ids).await?;
 
     let records = rows
         .into_iter()
         .map(|(book, created, updated)| {
             let tags = tags.remove(&book.id).unwrap_or_default();
+            let logs = logs.remove(&book.id).unwrap_or_default();
             let item = Item::Book(book);
             Record {
                 item,
                 meta: Meta { created, updated },
+                logs,
                 tags,
             }
         })
@@ -169,11 +175,16 @@ async fn fetch(State(db): State<Pool>, Path(id): Path<Uuid>) -> Result<Json<Reco
         .await?
         .remove(&id)
         .unwrap_or_default();
+    let logs = super::logs::load_logs_for(&mut conn, &[uid])
+        .await?
+        .remove(&id)
+        .unwrap_or_default();
 
     let item = Item::Book(book);
     Ok(Json(Record {
         item,
         meta: Meta { created, updated },
+        logs,
         tags,
     }))
 }
@@ -276,10 +287,15 @@ async fn update(
         .await?
         .remove(&id)
         .unwrap_or_default();
+    let logs = super::logs::load_logs_for(&mut conn, &[uid])
+        .await?
+        .remove(&id)
+        .unwrap_or_default();
     let item = Item::Book(book);
     Ok(Json(Record {
         item,
         meta: Meta { created, updated },
+        logs,
         tags,
     }))
 }
@@ -340,10 +356,15 @@ async fn modify(
         .await?
         .remove(&id)
         .unwrap_or_default();
+    let logs = super::logs::load_logs_for(&mut conn, &[uid])
+        .await?
+        .remove(&id)
+        .unwrap_or_default();
     let item = Item::Book(book);
     Ok(Json(Record {
         item,
         meta: Meta { created, updated },
+        logs,
         tags,
     }))
 }
@@ -438,4 +459,75 @@ async fn remove_tag(
     path: Path<(Uuid, String)>,
 ) -> Result<Json<Vec<String>>, Error> {
     super::tags::remove(state, kind, path).await
+}
+
+/// List logs for a book.
+#[utoipa::path(
+    get,
+    path = "/{id}/logs",
+    tag = "books",
+    params(("id" = Uuid, Path)),
+    responses((status = 200, body = Vec<Log>), (status = 404)),
+)]
+async fn list_logs(
+    state: State<Pool>,
+    kind: Option<Extension<media::Kind>>,
+    path: Path<Uuid>,
+) -> Result<Json<Vec<Log>>, Error> {
+    super::logs::list(state, kind, path).await
+}
+
+/// Replace logs for a book.
+#[utoipa::path(
+    put,
+    path = "/{id}/logs",
+    tag = "books",
+    params(("id" = Uuid, Path)),
+    security(("BearerAuth" = [])),
+    request_body(content = inline(Vec<media::logs::Body>)),
+    responses((status = 200, body = Vec<Log>), (status = 404)),
+)]
+async fn set_logs(
+    state: State<Pool>,
+    kind: Option<Extension<media::Kind>>,
+    path: Path<Uuid>,
+    body: Json<Vec<media::logs::Body>>,
+) -> Result<Json<Vec<Log>>, Error> {
+    super::logs::set(state, kind, path, body).await
+}
+
+/// Add a log to a book.
+#[utoipa::path(
+    post,
+    path = "/{id}/logs",
+    tag = "books",
+    params(("id" = Uuid, Path)),
+    security(("BearerAuth" = [])),
+    request_body(content = inline(media::logs::Body)),
+    responses((status = 200, body = Vec<Log>), (status = 404)),
+)]
+async fn insert_log(
+    state: State<Pool>,
+    kind: Option<Extension<media::Kind>>,
+    path: Path<Uuid>,
+    body: Json<media::logs::Body>,
+) -> Result<Json<Vec<Log>>, Error> {
+    super::logs::insert(state, kind, path, body).await
+}
+
+/// Remove a log from a book.
+#[utoipa::path(
+    delete,
+    path = "/{id}/logs/{log}",
+    tag = "books",
+    params(("id" = Uuid, Path), ("log" = Uuid, Path)),
+    security(("BearerAuth" = [])),
+    responses((status = 200, body = Vec<Log>), (status = 404)),
+)]
+async fn remove_log(
+    state: State<Pool>,
+    kind: Option<Extension<media::Kind>>,
+    path: Path<(Uuid, Uuid)>,
+) -> Result<Json<Vec<Log>>, Error> {
+    super::logs::remove(state, kind, path).await
 }

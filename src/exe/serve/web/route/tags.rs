@@ -196,6 +196,7 @@ async fn fetch(
 
     // Load tags
     let mut tags = load_tags_for(&mut conn, &ids).await?;
+    let mut logs = super::logs::load_logs_for(&mut conn, &ids).await?;
 
     let records = rows
         .into_iter()
@@ -203,9 +204,11 @@ async fn fetch(
             let id: Uuid = uid.into();
             let item = items.remove(&id)?;
             let tags = tags.remove(&id).unwrap_or_default();
+            let logs = logs.remove(&id).unwrap_or_default();
             Some(Record {
                 item,
                 meta: Meta { created, updated },
+                logs,
                 tags,
             })
         })
@@ -410,7 +413,7 @@ pub(super) async fn load_tags_for(
     Ok(map)
 }
 
-async fn exists(conn: &mut Conn, id: DbUuid, kind: Option<Kind>) -> Result<bool, Error> {
+pub(super) async fn exists(conn: &mut Conn, id: DbUuid, kind: Option<Kind>) -> Result<bool, Error> {
     if let Some(k) = kind {
         m::table
             .filter(m::id.eq(id))
