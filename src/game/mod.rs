@@ -1,5 +1,9 @@
 //! Video game.
 
+pub mod extras;
+pub mod owned;
+pub mod system;
+
 use uuid::Uuid;
 
 /// Video game.

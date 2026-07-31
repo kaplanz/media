@@ -4,7 +4,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use media::games::owned::{Body, Owned, Patch};
+use media::game::owned::{Body, Owned, Patch};
 use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
 use uuid::Uuid;
