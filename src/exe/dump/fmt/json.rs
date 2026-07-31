@@ -12,7 +12,7 @@ use media::book::Book;
 use media::film::Film;
 use media::game::Game;
 use media::game::extras::Extras;
-use media::game::owned::Owned;
+use media::game::owned::Row;
 use media::game::system::System;
 use media::link::Link;
 use media::logs::Log;
@@ -49,7 +49,7 @@ pub struct Games {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub system: Vec<System>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub owned: Vec<Owned>,
+    pub owned: Vec<Row>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extras: Vec<Extras>,
 }
@@ -199,7 +199,7 @@ pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyho
         .await
         .context("failed to query games_system")?;
 
-    let owned: Vec<Owned> = games_owned::table
+    let owned: Vec<Row> = games_owned::table
         .select(games_owned::all_columns)
         .order_by(games_owned::game.asc())
         .load(&mut conn)

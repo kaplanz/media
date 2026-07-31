@@ -1,10 +1,13 @@
 //! Owned game release routes.
 
+use std::collections::HashMap;
+
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use media::game::owned::{Body, Owned, Patch};
+use media::game::Game;
+use media::game::owned::{Body, Owned, Patch, Row};
 use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
 use uuid::Uuid;
@@ -12,12 +15,35 @@ use uuid::Uuid;
 use super::super::query::Order;
 use crate::axum::extract::{Error, Json, Path};
 use crate::db::{self, Pool, Uuid as DbUuid};
-use crate::schema::games_owned as t;
+use crate::schema::{games as g, games_owned as t};
 
 pub fn router() -> Router<Pool> {
     Router::new()
         .routes(routes!(list, create))
         .routes(routes!(fetch, update, modify, remove))
+}
+
+/// Load the game with the given ID.
+async fn load_game(conn: &mut db::Conn, id: Uuid) -> Result<Game, Error> {
+    g::table
+        .filter(g::id.eq(DbUuid::from(id)))
+        .select(g::all_columns)
+        .first(conn)
+        .await
+        .inspect_err(|err| tracing::error!("{err}"))
+        .map_err(Error::from)
+}
+
+/// Load games for a set of IDs, keyed by ID.
+async fn load_games_for(conn: &mut db::Conn, ids: &[DbUuid]) -> Result<HashMap<Uuid, Game>, Error> {
+    let rows: Vec<Game> = g::table
+        .filter(g::id.eq_any(ids))
+        .select(g::all_columns)
+        .load(conn)
+        .await
+        .inspect_err(|err| tracing::error!("{err}"))
+        .map_err(Error::from)?;
+    Ok(rows.into_iter().map(|game| (game.id, game)).collect())
 }
 
 /// Sort field for owned game releases.
@@ -77,7 +103,7 @@ async fn list(
         query = query.filter(t::system.eq(system));
     }
 
-    let rows: Vec<Owned> = {
+    let rows: Vec<Row> = {
         let q = match (
             params.sort.unwrap_or_default(),
             params.order.unwrap_or_default(),
@@ -99,6 +125,20 @@ async fn list(
     .inspect_err(|err| tracing::error!("{err}"))
     .map_err(Error::from)?;
 
+    // Resolve games
+    //
+    // NOTE: Games are cloned rather than removed from the map, since
+    // several releases may reference the same game.
+    let ids: Vec<DbUuid> = rows.iter().map(|row| DbUuid::from(row.game)).collect();
+    let games = load_games_for(&mut conn, &ids).await?;
+    let rows = rows
+        .into_iter()
+        .filter_map(|row| {
+            let game = games.get(&row.game).cloned()?;
+            Some(row.resolve(game))
+        })
+        .collect();
+
     Ok(Json(rows))
 }
 
@@ -115,12 +155,13 @@ async fn fetch(State(db): State<Pool>, Path(id): Path<Uuid>) -> Result<Json<Owne
     let row = t::table
         .select(t::all_columns)
         .filter(t::id.eq(DbUuid::from(id)))
-        .first::<Owned>(&mut conn)
+        .first::<Row>(&mut conn)
         .await
         .optional()
         .map_err(Error::from)?
         .ok_or(Error::NotFound)?;
-    Ok(Json(row))
+    let game = load_game(&mut conn, row.game).await?;
+    Ok(Json(row.resolve(game)))
 }
 
 /// Create an owned game release.
@@ -195,10 +236,11 @@ async fn update(
     let row = t::table
         .select(t::all_columns)
         .filter(t::id.eq(uid))
-        .first::<Owned>(&mut conn)
+        .first::<Row>(&mut conn)
         .await
         .map_err(Error::from)?;
-    Ok(Json(row))
+    let game = load_game(&mut conn, row.game).await?;
+    Ok(Json(row.resolve(game)))
 }
 
 /// Modify an owned game release.
@@ -242,10 +284,11 @@ async fn modify(
     let row = t::table
         .select(t::all_columns)
         .filter(t::id.eq(uid))
-        .first::<Owned>(&mut conn)
+        .first::<Row>(&mut conn)
         .await
         .map_err(Error::from)?;
-    Ok(Json(row))
+    let game = load_game(&mut conn, row.game).await?;
+    Ok(Json(row.resolve(game)))
 }
 
 /// Delete an owned game release.
