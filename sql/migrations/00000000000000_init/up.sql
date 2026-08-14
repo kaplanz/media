@@ -83,12 +83,11 @@ CREATE TABLE games (
     rating  INTEGER CHECK(rating BETWEEN 1 AND 5)
 ) STRICT;
 
--- Owned
-CREATE TABLE games_owned (
+-- Copies
+CREATE TABLE games_copies (
     -- Identity
     id       BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
-    game     BLOB NOT NULL REFERENCES games(id)
-        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    title    TEXT,
     -- Platform
     system   TEXT,
     region   TEXT CHECK(region IS NULL OR length(region) = 2),
@@ -101,8 +100,20 @@ CREATE TABLE games_owned (
     modified INTEGER NOT NULL DEFAULT 0 CHECK(modified IN (0, 1))
 ) STRICT;
 
+-- Reference
+CREATE TABLE games_copies_ref (
+    -- Relation
+    copy     BLOB NOT NULL REFERENCES games_copies(id)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    game     BLOB NOT NULL REFERENCES games(id)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    -- Sequence
+    idx      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (copy, game)
+) STRICT;
+
 -- Systems
-CREATE TABLE games_system (
+CREATE TABLE games_systems (
     -- Identity
     id       BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())),
     title    TEXT NOT NULL,
@@ -117,6 +128,18 @@ CREATE TABLE games_system (
     -- Collection
     complete INTEGER NOT NULL DEFAULT 0 CHECK(complete IN (0, 1)),
     modified INTEGER NOT NULL DEFAULT 0 CHECK(modified IN (0, 1))
+) STRICT;
+
+-- Reference
+CREATE TABLE games_systems_ref (
+    -- Relation
+    system   BLOB NOT NULL REFERENCES games_systems(id)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    game     BLOB NOT NULL REFERENCES games(id)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    -- Sequence
+    idx      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (system, game)
 ) STRICT;
 
 -- Extras
@@ -165,4 +188,16 @@ CREATE TABLE shows (
     year    INTEGER,
     -- Activity
     rating  INTEGER CHECK(rating BETWEEN 1 AND 5)
+) STRICT;
+
+-- Reference
+CREATE TABLE games_extras_ref (
+    -- Relation
+    extra    BLOB NOT NULL REFERENCES games_extras(id)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    game     BLOB NOT NULL REFERENCES games(id)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    -- Sequence
+    idx      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (extra, game)
 ) STRICT;

@@ -1,14 +1,14 @@
-//! Game accessory types.
+//! Game console types.
 
 use uuid::Uuid;
 
 use super::Game;
 
-/// Game accessory.
+/// Owned game console.
 #[derive(Clone, Debug)]
 #[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct Extras {
+pub struct Systems {
     /// Unique identifier.
     pub id: Uuid,
     /// Title.
@@ -33,7 +33,7 @@ pub struct Extras {
     pub modified: bool,
 }
 
-/// Stored game accessory.
+/// Stored game console.
 #[derive(Clone, Debug)]
 #[derive(diesel::Queryable)]
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -62,10 +62,10 @@ pub struct Row {
 }
 
 impl Row {
-    /// Resolves the game references into a full game accessory.
+    /// Resolves the game references into a full game console.
     #[must_use]
-    pub fn resolve(self, game: Vec<Game>) -> Extras {
-        Extras {
+    pub fn resolve(self, game: Vec<Game>) -> Systems {
+        Systems {
             id: self.id,
             title: self.title,
             game,
@@ -81,11 +81,11 @@ impl Row {
     }
 }
 
-/// Stored game accessory with its game references.
+/// Stored game console with its game references.
 #[derive(Clone, Debug)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Data {
-    /// Extras data.
+    /// Systems data.
     #[serde(flatten)]
     pub row: Row,
     /// Game references.

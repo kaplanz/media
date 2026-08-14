@@ -1,8 +1,11 @@
 DROP TABLE IF EXISTS shows;
 DROP TABLE IF EXISTS films;
+DROP TABLE IF EXISTS games_extras_ref;
 DROP TABLE IF EXISTS games_extras;
-DROP TABLE IF EXISTS games_owned;
-DROP TABLE IF EXISTS games_system;
+DROP TABLE IF EXISTS games_copies_ref;
+DROP TABLE IF EXISTS games_copies;
+DROP TABLE IF EXISTS games_systems_ref;
+DROP TABLE IF EXISTS games_systems;
 DROP TABLE IF EXISTS games;
 DROP TABLE IF EXISTS links;
 DROP TABLE IF EXISTS books_author;

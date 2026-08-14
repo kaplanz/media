@@ -32,8 +32,8 @@ pub mod route;
     (name = "books", description = "Reading items."),
     (name = "films", description = "Watched films."),
     (name = "games", description = "Video games."),
-    (name = "games/system", description = "Owned game consoles."),
-    (name = "games/owned", description = "Owned physical game releases."),
+    (name = "games/systems", description = "Owned game consoles."),
+    (name = "games/copies", description = "Owned physical game copies."),
     (name = "games/extras", description = "Game accessories."),
     (name = "links", description = "Web bookmarks."),
     (name = "shows", description = "Television shows."),
@@ -57,8 +57,8 @@ pub async fn serve(
         .merge(route::logs::router())
         .nest("/books", route::books::router())
         .nest("/films", route::films::router())
-        .nest("/games/system", route::games::system::router())
-        .nest("/games/owned", route::games::owned::router())
+        .nest("/games/systems", route::games::systems::router())
+        .nest("/games/copies", route::games::copies::router())
         .nest("/games/extras", route::games::extras::router())
         .nest("/games", route::games::router())
         .nest("/links", route::links::router())

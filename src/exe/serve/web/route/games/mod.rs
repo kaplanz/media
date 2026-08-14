@@ -1,8 +1,8 @@
 //! Game routes.
 
+pub mod copies;
 pub mod extras;
-pub mod owned;
-pub mod system;
+pub mod systems;
 
 use axum::Extension;
 use axum::extract::{Query, State};

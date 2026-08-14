@@ -1,8 +1,8 @@
 //! Video game.
 
+pub mod copies;
 pub mod extras;
-pub mod owned;
-pub mod system;
+pub mod systems;
 
 use uuid::Uuid;
 

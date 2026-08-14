@@ -11,9 +11,9 @@ use either::Either;
 use media::book::Book;
 use media::film::Film;
 use media::game::Game;
-use media::game::extras::Extras;
-use media::game::owned::Row;
-use media::game::system::System;
+use media::game::copies::{Data, Row};
+use media::game::extras::{Data as ExtrasData, Row as ExtrasRow};
+use media::game::systems::{Data as SystemsData, Row as SystemsRow};
 use media::link::Link;
 use media::logs::Log;
 use media::show::Show;
@@ -25,9 +25,12 @@ use crate::schema::{
     books,
     films,
     games,
+    games_copies,
+    games_copies_ref,
     games_extras,
-    games_owned,
-    games_system,
+    games_extras_ref,
+    games_systems,
+    games_systems_ref,
     links,
     logs,
     media as m,
@@ -47,16 +50,16 @@ pub struct Dump {
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Games {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub system: Vec<System>,
+    pub systems: Vec<SystemsData>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub owned: Vec<Row>,
+    pub copies: Vec<Data>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub extras: Vec<Extras>,
+    pub extras: Vec<ExtrasData>,
 }
 
 impl Games {
     fn is_empty(&self) -> bool {
-        self.system.is_empty() && self.owned.is_empty() && self.extras.is_empty()
+        self.systems.is_empty() && self.copies.is_empty() && self.extras.is_empty()
     }
 }
 
@@ -192,32 +195,92 @@ pub async fn run(pool: &Pool, mut out: BufWriter<Either<File, Stdout>>) -> anyho
         })
         .collect();
 
-    let system: Vec<System> = games_system::table
-        .select(games_system::all_columns)
-        .order_by(games_system::title.asc())
+    let rows: Vec<SystemsRow> = games_systems::table
+        .select(games_systems::all_columns)
+        .order_by(games_systems::title.asc())
         .load(&mut conn)
         .await
-        .context("failed to query games_system")?;
+        .context("failed to query games_systems")?;
 
-    let owned: Vec<Row> = games_owned::table
-        .select(games_owned::all_columns)
-        .order_by(games_owned::game.asc())
+    let pairs: Vec<(DbUuid, DbUuid)> = games_systems_ref::table
+        .select((games_systems_ref::system, games_systems_ref::game))
+        .order_by((games_systems_ref::system, games_systems_ref::idx))
         .load(&mut conn)
         .await
-        .context("failed to query games_owned")?;
+        .context("failed to query games_systems_ref")?;
 
-    let extras: Vec<Extras> = games_extras::table
+    let mut refs: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+    for (owner, game) in pairs {
+        refs.entry(owner.into()).or_default().push(game.into());
+    }
+
+    let systems: Vec<SystemsData> = rows
+        .into_iter()
+        .map(|row| {
+            let game = refs.remove(&row.id).unwrap_or_default();
+            SystemsData { row, game }
+        })
+        .collect();
+
+    let rows: Vec<Row> = games_copies::table
+        .select(games_copies::all_columns)
+        .order_by((games_copies::system.asc(), games_copies::title.asc()))
+        .load(&mut conn)
+        .await
+        .context("failed to query games_copies")?;
+
+    let pairs: Vec<(DbUuid, DbUuid)> = games_copies_ref::table
+        .select((games_copies_ref::copy, games_copies_ref::game))
+        .order_by((games_copies_ref::copy, games_copies_ref::idx))
+        .load(&mut conn)
+        .await
+        .context("failed to query games_copies_ref")?;
+
+    let mut works: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+    for (copy, game) in pairs {
+        works.entry(copy.into()).or_default().push(game.into());
+    }
+
+    let copies: Vec<Data> = rows
+        .into_iter()
+        .map(|row| {
+            let game = works.remove(&row.id).unwrap_or_default();
+            Data { row, game }
+        })
+        .collect();
+
+    let rows: Vec<ExtrasRow> = games_extras::table
         .select(games_extras::all_columns)
         .order_by(games_extras::title.asc())
         .load(&mut conn)
         .await
         .context("failed to query games_extras")?;
 
+    let pairs: Vec<(DbUuid, DbUuid)> = games_extras_ref::table
+        .select((games_extras_ref::extra, games_extras_ref::game))
+        .order_by((games_extras_ref::extra, games_extras_ref::idx))
+        .load(&mut conn)
+        .await
+        .context("failed to query games_extras_ref")?;
+
+    let mut refs: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+    for (owner, game) in pairs {
+        refs.entry(owner.into()).or_default().push(game.into());
+    }
+
+    let extras: Vec<ExtrasData> = rows
+        .into_iter()
+        .map(|row| {
+            let game = refs.remove(&row.id).unwrap_or_default();
+            ExtrasData { row, game }
+        })
+        .collect();
+
     let dump = Dump {
         media,
         games: Games {
-            system,
-            owned,
+            systems,
+            copies,
             extras,
         },
     };

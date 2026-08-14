@@ -1,18 +1,18 @@
-//! Game accessory types.
+//! Owned game copy types.
 
 use uuid::Uuid;
 
 use super::Game;
 
-/// Game accessory.
+/// Owned physical game copy.
 #[derive(Clone, Debug)]
 #[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct Extras {
+pub struct Copies {
     /// Unique identifier.
     pub id: Uuid,
-    /// Title.
-    pub title: String,
+    /// Release title.
+    pub title: Option<String>,
     /// Included games.
     pub game: Vec<Game>,
     /// Platform.
@@ -25,15 +25,13 @@ pub struct Extras {
     pub revision: Option<String>,
     /// Serial number.
     pub serial: Option<String>,
-    /// Variant.
-    pub variant: Option<String>,
     /// Complete-in-box status.
     pub complete: bool,
     /// Hardware modification status.
     pub modified: bool,
 }
 
-/// Stored game accessory.
+/// Stored owned game copy.
 #[derive(Clone, Debug)]
 #[derive(diesel::Queryable)]
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -41,8 +39,8 @@ pub struct Row {
     /// Unique identifier.
     #[diesel(deserialize_as = crate::Uuid)]
     pub id: Uuid,
-    /// Title.
-    pub title: String,
+    /// Release title.
+    pub title: Option<String>,
     /// Platform.
     pub system: Option<String>,
     /// Region code.
@@ -53,8 +51,6 @@ pub struct Row {
     pub revision: Option<String>,
     /// Serial number.
     pub serial: Option<String>,
-    /// Variant.
-    pub variant: Option<String>,
     /// Complete-in-box status.
     pub complete: bool,
     /// Hardware modification status.
@@ -62,10 +58,10 @@ pub struct Row {
 }
 
 impl Row {
-    /// Resolves the game references into a full game accessory.
+    /// Resolves the game references into a full copy.
     #[must_use]
-    pub fn resolve(self, game: Vec<Game>) -> Extras {
-        Extras {
+    pub fn resolve(self, game: Vec<Game>) -> Copies {
+        Copies {
             id: self.id,
             title: self.title,
             game,
@@ -74,18 +70,17 @@ impl Row {
             model: self.model,
             revision: self.revision,
             serial: self.serial,
-            variant: self.variant,
             complete: self.complete,
             modified: self.modified,
         }
     }
 }
 
-/// Stored game accessory with its game references.
+/// Stored owned game copy with its game references.
 #[derive(Clone, Debug)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Data {
-    /// Extras data.
+    /// Copy data.
     #[serde(flatten)]
     pub row: Row,
     /// Game references.
@@ -98,10 +93,9 @@ pub struct Data {
 #[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Body {
-    /// Title.
-    pub title: String,
+    /// Release title.
+    pub title: Option<String>,
     /// Included games.
-    #[serde(default)]
     pub game: Vec<Uuid>,
     /// Platform.
     pub system: Option<String>,
@@ -113,8 +107,6 @@ pub struct Body {
     pub revision: Option<String>,
     /// Serial number.
     pub serial: Option<String>,
-    /// Variant.
-    pub variant: Option<String>,
     /// Complete-in-box status.
     pub complete: Option<bool>,
     /// Hardware modification status.
@@ -124,15 +116,15 @@ pub struct Body {
 /// Partial request body.
 ///
 /// Absent fields are left untouched; nullable fields set to `null` are
-/// cleared.
+/// cleared. A present `games` list replaces the existing one.
 #[derive(Clone, Debug, Default)]
 #[derive(utoipa::ToSchema)]
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct Patch {
-    /// Title.
+    /// Release title.
     #[serde(deserialize_with = "crate::patch::present")]
-    pub title: Option<String>,
+    pub title: Option<Option<String>>,
     /// Included games.
     #[serde(deserialize_with = "crate::patch::present")]
     pub game: Option<Vec<Uuid>>,
@@ -151,9 +143,6 @@ pub struct Patch {
     /// Serial number.
     #[serde(deserialize_with = "crate::patch::present")]
     pub serial: Option<Option<String>>,
-    /// Variant.
-    #[serde(deserialize_with = "crate::patch::present")]
-    pub variant: Option<Option<String>>,
     /// Complete-in-box status.
     #[serde(deserialize_with = "crate::patch::present")]
     pub complete: Option<bool>,
@@ -178,7 +167,6 @@ impl Patch {
             || self.model.is_some()
             || self.revision.is_some()
             || self.serial.is_some()
-            || self.variant.is_some()
             || self.complete.is_some()
             || self.modified.is_some()
     }

@@ -1,4 +1,4 @@
-//! Game accessory routes.
+//! Game console routes.
 
 use std::collections::HashMap;
 
@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use media::game::Game;
-use media::game::extras::{Body, Extras, Patch, Row};
+use media::game::systems::{Body, Patch, Row, Systems};
 use utoipa_axum::router::OpenApiRouter as Router;
 use utoipa_axum::routes;
 use uuid::Uuid;
@@ -16,38 +16,38 @@ use uuid::Uuid;
 use super::super::query::Order;
 use crate::axum::extract::{Error, Json, Path};
 use crate::db::{self, Conn, Pool, Uuid as DbUuid};
-use crate::schema::{games as g, games_extras as t, games_extras_ref as w};
+use crate::schema::{games as g, games_systems as t, games_systems_ref as w};
 
-/// Load the games of each game accessory, keyed by ID.
+/// Load the games of each game console, keyed by ID.
 async fn load_games_for(
     conn: &mut Conn,
     ids: &[DbUuid],
 ) -> Result<HashMap<Uuid, Vec<Game>>, Error> {
     let rows: Vec<(DbUuid, Game)> = w::table
         .inner_join(g::table.on(g::id.eq(w::game)))
-        .filter(w::extra.eq_any(ids))
-        .select((w::extra, g::all_columns))
-        .order_by((w::extra, w::idx))
+        .filter(w::system.eq_any(ids))
+        .select((w::system, g::all_columns))
+        .order_by((w::system, w::idx))
         .load(conn)
         .await
         .inspect_err(|err| tracing::error!("{err}"))
         .map_err(Error::from)?;
     let mut games: HashMap<Uuid, Vec<Game>> = HashMap::new();
-    for (extra, game) in rows {
-        games.entry(extra.into()).or_default().push(game);
+    for (system, game) in rows {
+        games.entry(system.into()).or_default().push(game);
     }
     Ok(games)
 }
 
-/// Replace the games of a game accessory.
-async fn set_games(conn: &mut Conn, extra: DbUuid, games: &[Uuid]) -> QueryResult<()> {
-    diesel::delete(w::table.filter(w::extra.eq(extra)))
+/// Replace the games of a game console.
+async fn set_games(conn: &mut Conn, system: DbUuid, games: &[Uuid]) -> QueryResult<()> {
+    diesel::delete(w::table.filter(w::system.eq(system)))
         .execute(conn)
         .await?;
     for (idx, game) in games.iter().enumerate() {
         diesel::insert_into(w::table)
             .values((
-                w::extra.eq(extra),
+                w::system.eq(system),
                 w::game.eq(DbUuid::from(*game)),
                 w::idx.eq(i64::try_from(idx).unwrap_or(i64::MAX)),
             ))
@@ -63,7 +63,7 @@ pub fn router() -> Router<Pool> {
         .routes(routes!(fetch, update, modify, remove))
 }
 
-/// Sort field for game accessories.
+/// Sort field for game consoles.
 #[derive(Clone, Copy, Debug, Default)]
 #[derive(serde::Deserialize)]
 #[derive(utoipa::ToSchema)]
@@ -78,7 +78,7 @@ enum Sort {
     Model,
 }
 
-/// Query parameters for listing game accessories.
+/// Query parameters for listing game consoles.
 #[derive(Clone, Debug, Default)]
 #[derive(serde::Deserialize)]
 #[derive(utoipa::IntoParams)]
@@ -101,18 +101,18 @@ struct Params {
     offset: Option<i64>,
 }
 
-/// List game accessories.
+/// List game consoles.
 #[utoipa::path(
     get,
     path = "/",
-    tag = "games/extras",
+    tag = "games/systems",
     params(Params),
-    responses((status = 200, body = Vec<Extras>)),
+    responses((status = 200, body = Vec<Systems>)),
 )]
 async fn list(
     State(db): State<Pool>,
     Query(params): Query<Params>,
-) -> Result<Json<Vec<Extras>>, Error> {
+) -> Result<Json<Vec<Systems>>, Error> {
     let mut conn = db::get_conn(&db).await.map_err(Error::from)?;
 
     let mut query = t::table.select(t::all_columns).into_boxed();
@@ -125,7 +125,7 @@ async fn list(
             t::id.eq_any(
                 w::table
                     .filter(w::game.eq(DbUuid::from(game)))
-                    .select(w::extra),
+                    .select(w::system),
             ),
         );
     }
@@ -171,15 +171,15 @@ async fn list(
     Ok(Json(rows))
 }
 
-/// Fetch a game accessory by ID.
+/// Fetch a game console by ID.
 #[utoipa::path(
     get,
     path = "/{id}",
-    tag = "games/extras",
+    tag = "games/systems",
     params(("id" = Uuid, Path)),
-    responses((status = 200, body = Extras), (status = 404)),
+    responses((status = 200, body = Systems), (status = 404)),
 )]
-async fn fetch(State(db): State<Pool>, Path(id): Path<Uuid>) -> Result<Json<Extras>, Error> {
+async fn fetch(State(db): State<Pool>, Path(id): Path<Uuid>) -> Result<Json<Systems>, Error> {
     let mut conn = db::get_conn(&db).await.map_err(Error::from)?;
     let uid = DbUuid::from(id);
     let row = t::table
@@ -197,11 +197,11 @@ async fn fetch(State(db): State<Pool>, Path(id): Path<Uuid>) -> Result<Json<Extr
     Ok(Json(row.resolve(game)))
 }
 
-/// Create a game accessory.
+/// Create a game console.
 #[utoipa::path(
     post,
     path = "/",
-    tag = "games/extras",
+    tag = "games/systems",
     security(("BearerAuth" = [])),
     request_body(content = inline(Body)),
     responses((status = 201, body = Uuid), (status = 500)),
@@ -241,21 +241,21 @@ async fn create(
     Ok((StatusCode::CREATED, Json(id)))
 }
 
-/// Update a game accessory.
+/// Update a game console.
 #[utoipa::path(
     put,
     path = "/{id}",
-    tag = "games/extras",
+    tag = "games/systems",
     params(("id" = Uuid, Path)),
     security(("BearerAuth" = [])),
     request_body(content = inline(Body)),
-    responses((status = 200, body = Extras), (status = 404)),
+    responses((status = 200, body = Systems), (status = 404)),
 )]
 async fn update(
     State(db): State<Pool>,
     Path(id): Path<Uuid>,
     Json(body): Json<Body>,
-) -> Result<Json<Extras>, Error> {
+) -> Result<Json<Systems>, Error> {
     let mut conn = db::get_conn(&db).await.map_err(Error::from)?;
     let uid = DbUuid::from(id);
     let n = conn
@@ -301,21 +301,21 @@ async fn update(
     Ok(Json(row.resolve(game)))
 }
 
-/// Modify a game accessory.
+/// Modify a game console.
 #[utoipa::path(
     patch,
     path = "/{id}",
-    tag = "games/extras",
+    tag = "games/systems",
     params(("id" = Uuid, Path)),
     security(("BearerAuth" = [])),
     request_body(content = inline(Patch)),
-    responses((status = 200, body = Extras), (status = 404)),
+    responses((status = 200, body = Systems), (status = 404)),
 )]
 async fn modify(
     State(db): State<Pool>,
     Path(id): Path<Uuid>,
     Json(body): Json<Patch>,
-) -> Result<Json<Extras>, Error> {
+) -> Result<Json<Systems>, Error> {
     let mut conn = db::get_conn(&db).await.map_err(Error::from)?;
     let uid = DbUuid::from(id);
     // Apply present fields
@@ -364,13 +364,13 @@ async fn modify(
     Ok(Json(row.resolve(game)))
 }
 
-/// Delete a game accessory.
+/// Delete a game console.
 #[utoipa::path(
     delete,
     path = "/{id}",
-    tag = "games/extras",
-    security(("BearerAuth" = [])),
+    tag = "games/systems",
     params(("id" = Uuid, Path)),
+    security(("BearerAuth" = [])),
     responses((status = 204), (status = 404)),
 )]
 async fn remove(State(db): State<Pool>, Path(id): Path<Uuid>) -> Result<StatusCode, Error> {

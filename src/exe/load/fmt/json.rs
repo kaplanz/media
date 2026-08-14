@@ -16,9 +16,12 @@ use crate::schema::{
     books,
     films,
     games,
+    games_copies,
+    games_copies_ref,
     games_extras,
-    games_owned,
-    games_system,
+    games_extras_ref,
+    games_systems,
+    games_systems_ref,
     links,
     logs,
     media as m,
@@ -146,60 +149,99 @@ pub async fn run(pool: &Pool, reader: BufReader<Either<File, Stdin>>) -> anyhow:
                 }
             }
 
-            for s in &dump.games.system {
-                diesel::insert_into(games_system::table)
+            for s in &dump.games.systems {
+                let uid = DbUuid::from(s.row.id);
+                diesel::insert_into(games_systems::table)
                     .values((
-                        games_system::id.eq(DbUuid::from(s.id)),
-                        games_system::title.eq(&s.title),
-                        games_system::system.eq(&s.system),
-                        games_system::region.eq(&s.region),
-                        games_system::model.eq(&s.model),
-                        games_system::revision.eq(&s.revision),
-                        games_system::serial.eq(&s.serial),
-                        games_system::variant.eq(&s.variant),
-                        games_system::complete.eq(s.complete),
-                        games_system::modified.eq(s.modified),
+                        games_systems::id.eq(uid),
+                        games_systems::title.eq(&s.row.title),
+                        games_systems::system.eq(&s.row.system),
+                        games_systems::region.eq(&s.row.region),
+                        games_systems::model.eq(&s.row.model),
+                        games_systems::revision.eq(&s.row.revision),
+                        games_systems::serial.eq(&s.row.serial),
+                        games_systems::variant.eq(&s.row.variant),
+                        games_systems::complete.eq(s.row.complete),
+                        games_systems::modified.eq(s.row.modified),
                     ))
                     .on_conflict_do_nothing()
                     .execute(conn)
                     .await?;
+
+                for (idx, game) in s.game.iter().enumerate() {
+                    diesel::insert_into(games_systems_ref::table)
+                        .values((
+                            games_systems_ref::system.eq(uid),
+                            games_systems_ref::game.eq(DbUuid::from(*game)),
+                            games_systems_ref::idx.eq(i64::try_from(idx).unwrap_or(i64::MAX)),
+                        ))
+                        .on_conflict_do_nothing()
+                        .execute(conn)
+                        .await?;
+                }
             }
 
-            for o in &dump.games.owned {
-                diesel::insert_into(games_owned::table)
+            for c in &dump.games.copies {
+                let uid = DbUuid::from(c.row.id);
+                diesel::insert_into(games_copies::table)
                     .values((
-                        games_owned::id.eq(DbUuid::from(o.id)),
-                        games_owned::game.eq(DbUuid::from(o.game)),
-                        games_owned::system.eq(&o.system),
-                        games_owned::region.eq(&o.region),
-                        games_owned::model.eq(&o.model),
-                        games_owned::revision.eq(&o.revision),
-                        games_owned::serial.eq(&o.serial),
-                        games_owned::complete.eq(o.complete),
-                        games_owned::modified.eq(o.modified),
+                        games_copies::id.eq(uid),
+                        games_copies::title.eq(&c.row.title),
+                        games_copies::system.eq(&c.row.system),
+                        games_copies::region.eq(&c.row.region),
+                        games_copies::model.eq(&c.row.model),
+                        games_copies::revision.eq(&c.row.revision),
+                        games_copies::serial.eq(&c.row.serial),
+                        games_copies::complete.eq(c.row.complete),
+                        games_copies::modified.eq(c.row.modified),
                     ))
                     .on_conflict_do_nothing()
                     .execute(conn)
                     .await?;
+
+                for (idx, game) in c.game.iter().enumerate() {
+                    diesel::insert_into(games_copies_ref::table)
+                        .values((
+                            games_copies_ref::copy.eq(uid),
+                            games_copies_ref::game.eq(DbUuid::from(*game)),
+                            games_copies_ref::idx.eq(i64::try_from(idx).unwrap_or(i64::MAX)),
+                        ))
+                        .on_conflict_do_nothing()
+                        .execute(conn)
+                        .await?;
+                }
             }
 
             for e in &dump.games.extras {
+                let uid = DbUuid::from(e.row.id);
                 diesel::insert_into(games_extras::table)
                     .values((
-                        games_extras::id.eq(DbUuid::from(e.id)),
-                        games_extras::title.eq(&e.title),
-                        games_extras::system.eq(&e.system),
-                        games_extras::region.eq(&e.region),
-                        games_extras::model.eq(&e.model),
-                        games_extras::revision.eq(&e.revision),
-                        games_extras::serial.eq(&e.serial),
-                        games_extras::variant.eq(&e.variant),
-                        games_extras::complete.eq(e.complete),
-                        games_extras::modified.eq(e.modified),
+                        games_extras::id.eq(uid),
+                        games_extras::title.eq(&e.row.title),
+                        games_extras::system.eq(&e.row.system),
+                        games_extras::region.eq(&e.row.region),
+                        games_extras::model.eq(&e.row.model),
+                        games_extras::revision.eq(&e.row.revision),
+                        games_extras::serial.eq(&e.row.serial),
+                        games_extras::variant.eq(&e.row.variant),
+                        games_extras::complete.eq(e.row.complete),
+                        games_extras::modified.eq(e.row.modified),
                     ))
                     .on_conflict_do_nothing()
                     .execute(conn)
                     .await?;
+
+                for (idx, game) in e.game.iter().enumerate() {
+                    diesel::insert_into(games_extras_ref::table)
+                        .values((
+                            games_extras_ref::extra.eq(uid),
+                            games_extras_ref::game.eq(DbUuid::from(*game)),
+                            games_extras_ref::idx.eq(i64::try_from(idx).unwrap_or(i64::MAX)),
+                        ))
+                        .on_conflict_do_nothing()
+                        .execute(conn)
+                        .await?;
+                }
             }
 
             Ok::<(), diesel::result::Error>(())

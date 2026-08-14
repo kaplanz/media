@@ -75,7 +75,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    games_system (id) {
+    games_systems (id) {
         id -> Binary,
         title -> Text,
         system -> Nullable<Text>,
@@ -90,9 +90,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    games_owned (id) {
+    games_copies (id) {
         id -> Binary,
-        game -> Binary,
+        title -> Nullable<Text>,
         system -> Nullable<Text>,
         region -> Nullable<Text>,
         model -> Nullable<Text>,
@@ -100,6 +100,22 @@ diesel::table! {
         serial -> Nullable<Text>,
         complete -> Bool,
         modified -> Bool,
+    }
+}
+
+diesel::table! {
+    games_copies_ref (copy, game) {
+        copy -> Binary,
+        game -> Binary,
+        idx -> BigInt,
+    }
+}
+
+diesel::table! {
+    games_systems_ref (system, game) {
+        system -> Binary,
+        game -> Binary,
+        idx -> BigInt,
     }
 }
 
@@ -118,10 +134,21 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    games_extras_ref (extra, game) {
+        extra -> Binary,
+        game -> Binary,
+        idx -> BigInt,
+    }
+}
+
 diesel::joinable!(books -> media (id));
 diesel::joinable!(films -> media (id));
 diesel::joinable!(games -> media (id));
-diesel::joinable!(games_owned -> games (game));
+diesel::joinable!(games_copies_ref -> games (game));
+diesel::joinable!(games_extras_ref -> games_extras (extra));
+diesel::joinable!(games_systems_ref -> games_systems (system));
+diesel::joinable!(games_copies_ref -> games_copies (copy));
 diesel::joinable!(links -> media (id));
 diesel::joinable!(logs -> media (media));
 diesel::joinable!(shows -> media (id));
@@ -131,7 +158,12 @@ diesel::allow_tables_to_appear_in_same_query!(
     books,
     films,
     games,
-    games_owned,
+    games_copies,
+    games_copies_ref,
+    games_extras,
+    games_extras_ref,
+    games_systems,
+    games_systems_ref,
     links,
     logs,
     shows,
