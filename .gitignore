@@ -1,1 +1,21 @@
-/node_modules
+# Logs
+logs
+*.log
+
+# Dependencies
+node_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# Compiled executable
+/dist
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
