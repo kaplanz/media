@@ -26,7 +26,8 @@ As a single binary, `media` provides several commands. Run it with `-h` to see
 usage information.
 
 - `serve`: starts the HTTP server against the provided database, applying the
-  schema first if the file is empty. Aliased as `s`.
+  schema first. Every statement is idempotent, so a new file needs no setup and
+  an existing one picks up anything added since. Aliased as `s`.
 - `dump`: exports the collection to JSON or SQL, printed to the console unless
   `-o` names a file. Aliased as `export`.
 - `load`: imports a collection from JSON or SQL, read from the console unless

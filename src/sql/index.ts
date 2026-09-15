@@ -14,8 +14,9 @@ export type Cxn = ReturnType<typeof open>;
 /**
  * Opens the database at the given path.
  *
- * The schema is applied to an empty database, so a new file needs no separate
- * setup step.
+ * The schema is applied in full every time, so a new file needs no separate
+ * setup step and an existing one picks up whatever has been added since it was
+ * written. Every statement is idempotent, which is what makes that safe.
  */
 export function open(url: string): ReturnType<typeof drizzle> {
     // Connect to database
@@ -24,16 +25,10 @@ export function open(url: string): ReturnType<typeof drizzle> {
     sqlite.exec("PRAGMA journal_mode = WAL");
 
     // Apply schema
-    if (!ready(sqlite)) sqlite.exec(ddl);
+    sqlite.exec(ddl);
 
     return drizzle(sqlite);
 }
-
-/** Reports whether the schema has already been applied. */
-const ready = (sqlite: Database) =>
-    sqlite
-        .query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
-        .get("media") !== null;
 
 /**
  * Returns the number of rows changed by a mutation.
