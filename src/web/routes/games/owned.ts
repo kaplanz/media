@@ -5,6 +5,8 @@
 //! kind paths are sugar over the `kind` query parameter, while an item is
 //! addressed by its identifier alone.
 
+import { rm } from "node:fs/promises";
+
 import { and, asc, desc, eq, inArray, like } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { Elysia, t } from "elysia";
@@ -34,6 +36,7 @@ import {
     NO_CONTENT,
     operation,
 } from "../../reply";
+import { dumps, holding, Rom } from "./roms";
 
 /** What an owned item is. */
 export const KINDS = ["release", "console", "extra"] as const;
@@ -92,12 +95,13 @@ const Item = define(
     t.Object(columns, { description: "Owned game item." }),
 );
 
-/** Owned item, with its game references resolved. */
+/** Owned item, with its game references and dumps resolved. */
 const Owned = t.Object(
     {
         kind: discriminant!,
         item: Item,
         games: list(Game, "Included games."),
+        roms: list(Rom, "Dumped ROMs."),
     },
     { description: "Owned game record." },
 );
@@ -123,7 +127,7 @@ const TAG = "games/owned";
 
 const SORT = ["title", "platform", "model"];
 
-export function router(cxn: db.Cxn) {
+export function router(cxn: db.Cxn, root: string) {
     const params = t.Object({ id: ident });
 
     /** Answers a request for an item that is not on file. */
@@ -141,6 +145,9 @@ export function router(cxn: db.Cxn) {
             }),
         ),
         platform: t.Optional(t.String({ description: "Filter by platform." })),
+        sha1: t.Optional(
+            t.String({ description: "Filter by the SHA-1 of a dumped ROM." }),
+        ),
         sort: choice(SORT, "Field to sort by."),
         ...page,
     };
@@ -181,12 +188,24 @@ export function router(cxn: db.Cxn) {
         });
     };
 
-    /** Wraps each row in the record envelope, resolving its game references. */
+    /**
+     * Wraps each row in the record envelope, resolving what it refers to.
+     *
+     * The games and the dumps are each loaded for every row at once, so a
+     * listing costs two queries rather than two per item.
+     */
     const resolve = async (rows: { id: string }[]) => {
-        const held = await games(rows.map((row) => row.id));
+        const ids = rows.map((row) => row.id);
+        const held = await games(ids);
+        const dumped = await dumps(cxn, root, ids);
         return rows.map((row) => {
             const { kind, ...item } = row as Record<string, unknown>;
-            return { kind, item, games: held.get(row.id) ?? [] };
+            return {
+                kind,
+                item,
+                games: held.get(row.id) ?? [],
+                roms: dumped.get(row.id) ?? [],
+            };
         });
     };
 
@@ -215,6 +234,7 @@ export function router(cxn: db.Cxn) {
         q?: string | undefined;
         game?: string | undefined;
         platform?: string | undefined;
+        sha1?: string | undefined;
         sort?: string | undefined;
         order?: string | undefined;
         limit?: number | undefined;
@@ -238,6 +258,15 @@ export function router(cxn: db.Cxn) {
                 : undefined,
             args.platform
                 ? eq(schema.games_owned.platform, args.platform)
+                : undefined,
+            args.sha1
+                ? inArray(
+                      schema.games_owned.id,
+                      cxn
+                          .select({ owned: schema.games_owned_rom.owned })
+                          .from(schema.games_owned_rom)
+                          .where(eq(schema.games_owned_rom.sha1, args.sha1)),
+                  )
                 : undefined,
         ];
 
@@ -382,7 +411,15 @@ export function router(cxn: db.Cxn) {
                 const res = await cxn
                     .delete(schema.games_owned)
                     .where(eq(schema.games_owned.id, args.id));
-                return db.affected(res) ? empty(NO_CONTENT) : missing();
+                if (!db.affected(res)) return missing();
+
+                // Cascading removes the rows recording this item's dumps, and
+                // knows nothing of the bytes they name
+                await rm(holding(root, args.id), {
+                    recursive: true,
+                    force: true,
+                });
+                return empty(NO_CONTENT);
             },
             {
                 params,

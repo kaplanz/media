@@ -12,14 +12,16 @@ import * as logs from "../logs";
 import * as tags from "../tags";
 
 import * as owned from "./owned";
+import * as roms from "./roms";
 
 const decl = BY_KIND.get("game")!;
 const mount = tags.mounted(decl);
 
 /** Serves everything under `/games`. */
-export const router = (cxn: db.Cxn) =>
+export const router = (cxn: db.Cxn, roots: string) =>
     new Elysia({ name: "games" })
         .use(item.router(cxn, decl) as never)
         .use(tags.router(cxn, mount) as never)
         .use(logs.router(cxn, mount) as never)
-        .use(owned.router(cxn) as never);
+        .use(owned.router(cxn, roots) as never)
+        .use(roms.router(cxn, roots) as never);

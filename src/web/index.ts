@@ -32,6 +32,8 @@ export type Options = {
     token?: string | undefined;
     /** URL prefix when served behind a reverse proxy. */
     prefix?: string | undefined;
+    /** Directory holding dumped ROMs. */
+    roms: string;
 };
 
 const TAGS = [
@@ -54,12 +56,19 @@ type Invalid = {
 };
 
 /**
- * Requests whose body arrived with the wrong media type.
+ * Requests whose body arrived with the wrong media type, against what was
+ * expected of them.
  *
  * A parse hook cannot answer the request itself, so the decision is recorded
  * here and acted on when the resulting error surfaces.
  */
-const unsupported = new WeakSet<Request>();
+const unsupported = new WeakMap<Request, string>();
+
+/** The one route whose body is bytes rather than JSON. */
+const OPAQUE = "/games/owned/:id/roms";
+
+const JSON_TYPE = "application/json";
+const BYTE_TYPE = "application/octet-stream";
 
 /**
  * Parses a request body.
@@ -72,13 +81,25 @@ const unsupported = new WeakSet<Request>();
  * Routes carrying a body additionally name the built-in `json` parser, which
  * never runs but records the media type the spec advertises: a parser given as
  * a function leaves the generator with nothing to name.
+ *
+ * A ROM upload is the one body this does not read. Its bytes are opaque and
+ * arbitrarily large, so the route streams them from the request itself. Leaving
+ * them here also means an unauthorized upload is refused before a single chunk
+ * has been taken, since the guard runs between this and the handler.
  */
-async function parse({ request }: { request: Request }) {
+async function parse({ request, route }: { request: Request; route: string }) {
+    const kind = request.headers.get("content-type") ?? "";
+    if (route === OPAQUE && request.method === "POST") {
+        if (!kind.includes(BYTE_TYPE)) {
+            unsupported.set(request, BYTE_TYPE);
+            throw new Error("unsupported media type");
+        }
+        return {};
+    }
     const text = await request.text();
     if (!text) return {};
-    const kind = request.headers.get("content-type") ?? "";
-    if (!kind.includes("application/json")) {
-        unsupported.add(request);
+    if (!kind.includes(JSON_TYPE)) {
+        unsupported.set(request, JSON_TYPE);
         throw new Error("unsupported media type");
     }
     return JSON.parse(text) as unknown;
@@ -92,10 +113,11 @@ function handle(ctx: {
 }) {
     const { code, error, request } = ctx;
 
-    if (unsupported.has(request)) {
+    const expected = unsupported.get(request);
+    if (expected) {
         return fail(
             "unsupported_media_type",
-            "Expected Content-Type: application/json.",
+            `Expected Content-Type: ${expected}.`,
         );
     }
     if (code === "PARSE") {
@@ -184,7 +206,7 @@ export function build(opts: Options) {
     routed = routed
         .use(books.router(cxn) as never)
         .use(films.router(cxn) as never)
-        .use(games.router(cxn) as never)
+        .use(games.router(cxn, opts.roms) as never)
         .use(links.router(cxn) as never)
         .use(shows.router(cxn) as never);
 
