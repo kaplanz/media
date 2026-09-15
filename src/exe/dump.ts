@@ -103,7 +103,7 @@ async function records(cxn: db.Cxn) {
     return out;
 }
 
-/** Collects the owned game items, each with its game references. */
+/** Collects the owned game items, each with its game references and dumps. */
 async function ownedGames(cxn: db.Cxn) {
     const rows = await cxn
         .select()
@@ -125,9 +125,32 @@ async function ownedGames(cxn: db.Cxn) {
         else held.set(ref.owned, [ref.game]);
     }
 
+    // Dumps carry their digests but never their bytes, which live in the
+    // store rather than the database
+    const dumps = await cxn
+        .select()
+        .from(schema.games_owned_rom)
+        .orderBy(
+            asc(schema.games_owned_rom.owned),
+            asc(schema.games_owned_rom.idx),
+        );
+    const roms = new Map<string, unknown[]>();
+    for (const { owned, idx: _, ...rest } of dumps) {
+        const { crc32, md5, sha1, sha256, ...rom } = rest;
+        const one = { ...rom, hash: { crc32, md5, sha1, sha256 } };
+        const held = roms.get(owned);
+        if (held) held.push(one);
+        else roms.set(owned, [one]);
+    }
+
     return rows.map((row) => {
         const games = held.get(row.id);
-        return games?.length ? { ...row, games } : { ...row };
+        const dumped = roms.get(row.id);
+        return {
+            ...row,
+            ...(games?.length ? { games } : {}),
+            ...(dumped?.length ? { roms: dumped } : {}),
+        };
     });
 }
 

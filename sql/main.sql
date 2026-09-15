@@ -128,6 +128,29 @@ CREATE TABLE games_owned_ref (
     PRIMARY KEY (owned, game)
 ) STRICT;
 
+-- ROM
+CREATE TABLE games_owned_rom (
+    -- Identity
+    id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())) NOT NULL,
+    owned   BLOB NOT NULL REFERENCES games_owned(id)
+        ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+    -- Content
+    title   TEXT,
+    size    INTEGER NOT NULL CHECK(size >= 0),
+    -- Digest
+    crc32   BLOB NOT NULL CHECK(length(crc32)  = 4),
+    md5     BLOB NOT NULL CHECK(length(md5)    = 16),
+    sha1    BLOB NOT NULL CHECK(length(sha1)   = 20),
+    sha256  BLOB NOT NULL CHECK(length(sha256) = 32),
+    -- Metadata
+    dumped  INTEGER DEFAULT (UNIXEPOCH()) NOT NULL,
+    -- Sequence
+    idx     INTEGER NOT NULL DEFAULT 0
+) STRICT;
+
+CREATE INDEX games_owned_rom_owned ON games_owned_rom(owned);
+CREATE INDEX games_owned_rom_sha1  ON games_owned_rom(sha1);
+
 --
 -- Films
 --

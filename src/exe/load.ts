@@ -40,6 +40,16 @@ type Owned = Fields & {
     id: string;
     game?: string | string[];
     games?: string[];
+    roms?: Rom[];
+};
+
+/** Stored dump, holding everything but the bytes. */
+type Rom = {
+    id: string;
+    title: string | null;
+    size: number;
+    hash: { crc32: string; md5: string; sha1: string; sha256: string };
+    dumped: number;
 };
 
 /** Top-level dump payload. */
@@ -141,7 +151,7 @@ function insert(cxn: db.Cxn, payload: Payload) {
 
         // Insert owned game items
         for (const entry of payload.games?.owned ?? []) {
-            const { game, games, ...row } = entry;
+            const { game, games, roms, ...row } = entry;
             tx.insert(schema.games_owned)
                 .values(row as typeof schema.games_owned.$inferInsert)
                 .onConflictDoNothing()
@@ -150,6 +160,16 @@ function insert(cxn: db.Cxn, payload: Payload) {
             (held ?? []).forEach((target, idx) => {
                 tx.insert(schema.games_owned_ref)
                     .values({ owned: entry.id, game: target, idx })
+                    .onConflictDoNothing()
+                    .run();
+            });
+
+            // The bytes are not carried, so a dump loaded without its store
+            // reports itself as absent until the files are put beside it
+            (roms ?? []).forEach((rom, idx) => {
+                const { hash, ...rest } = rom;
+                tx.insert(schema.games_owned_rom)
+                    .values({ ...rest, ...hash, owned: entry.id, idx })
                     .onConflictDoNothing()
                     .run();
             });

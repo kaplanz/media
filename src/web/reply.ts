@@ -123,7 +123,7 @@ type Store = { store: { token?: string | undefined } };
 const authorize = ({ request, store }: { request: Request } & Store) => {
     const bearer = request.headers.get("authorization");
     if (store.token === undefined || bearer !== `Bearer ${store.token}`) {
-        return fail("unauthorized", "A bearer token is required to write.");
+        return fail("unauthorized", "A bearer token is required.");
     }
     return undefined;
 };

@@ -15,6 +15,8 @@ export type Config = {
     token?: string;
     /** URL prefix when served behind a reverse proxy. */
     prefix?: string;
+    /** Directory holding dumped ROMs. */
+    roms?: string;
 };
 
 /** An error caused by loading the configuration. */
@@ -26,6 +28,14 @@ export const path = () =>
         process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"),
         "media",
         "config.toml",
+    );
+
+/** Returns the default directory holding dumped ROMs. */
+export const roms = () =>
+    join(
+        process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"),
+        "media",
+        "roms",
     );
 
 /**

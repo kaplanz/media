@@ -25,6 +25,7 @@ export async function main(args: Args) {
     const port = args.port ?? file.port ?? PORT;
     const token = args.token ?? file.token;
     const prefix = args.prefix ?? file.prefix;
+    const roms = args.roms ?? file.roms ?? cfg.roms();
 
     // Warn about read-only mode
     if (!token) {
@@ -33,7 +34,7 @@ export async function main(args: Args) {
     }
 
     // Serve the collection
-    const app = build({ db: args.db, token, prefix });
+    const app = build({ db: args.db, token, prefix, roms });
     app.listen({ hostname: host, port });
     log.info(`listening on ${host}:${port}`);
     return app;

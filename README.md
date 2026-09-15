@@ -54,7 +54,12 @@ media dump media.db | media load other.db
 host  = "::1"
 port  = 3000
 token = "secret"
+roms  = "/srv/media/roms"
 ```
+
+`roms` names the directory holding dumped ROMs, defaulting to
+`$XDG_DATA_HOME/media/roms`. Only the metadata lives in the database, so this
+directory and the database file are backed up together or not at all.
 
 Where an option is given in several places, the last of cli, env, file wins, so
 anything in the file may be overridden at the command line.
@@ -80,7 +85,10 @@ list endpoints support filtering, sorting, and pagination through query
 parameters.
 
 Write endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) require the bearer token when
-one is configured. Without a token, the server runs read-only.
+one is configured. Without a token, the server runs read-only. Each operation
+declares for itself whether it is guarded, so the requirement the document
+advertises is the one the server enforces, and a read may be guarded too: the
+ROM bytes below are.
 
 > [!IMPORTANT]
 >
@@ -104,7 +112,45 @@ wrap the stored columns in an `item` object, beside the records they resolve:
   `/games/owned/releases`, `/games/owned/consoles`, and `/games/owned/extras`
   are shorthand for the corresponding `kind` filter. Write endpoints name those
   games as either `game=<id>` or `games=[<id0>, <id1>, ...]`, the former being
-  shorthand for a list of one.
+  shorthand for a list of one. `hash=<hex>` narrows the list to the items
+  holding a given dump, and each record carries its dumps under `roms`.
+
+A dumped ROM is a fact about the cartridge or disc held rather than about the
+game, so dumps hang off the owned item. The database records only the size, the
+dump date, and the CRC-32, MD5, SHA-1, and SHA-256 digests, served as lowercase
+hexadecimal under `hash`. The bytes themselves live in the store, under
+`{roms}/{owned}/{rom}`, named by identifier alone.
+
+Each path says one thing. `/games/owned/{id}/roms` is about ownership, so it
+lists what an item holds and accepts what is dumped from it. A dump is keyed by
+its own identifier, so `/games/owned/roms/{rom}` addresses one wherever it
+belongs, and `/games/owned/roms` lists every dump across the collection,
+filtered by `owned=<id>`, `hash=<hex>`, or `q=<text>` against the title. A
+hash names its own digest by width, so 8 hexadecimal characters is matched as a
+CRC-32, 32 as an MD5, 40 as a SHA-1, and 64 as a SHA-256.
+
+Digests are computed once, when the bytes arrive, so listing costs an index
+read rather than a rehash. `present` reports whether the file is still in the
+store, since a collection loaded from an export carries every row and none of
+the bytes, and `/games/owned/roms/{rom}/verify` rehashes one file and compares
+it against what was recorded.
+
+> [!IMPORTANT]
+>
+> The bytes are the one read this API guards. `/games/owned/roms/{rom}/data`
+> requires the bearer token, while the metadata beside it stays open, so a
+> collection may be published without publishing what it holds.
+
+Uploads take a raw body, with the title and dump date as optional query
+parameters. Note that a body read from standard input is sent as JSON unless
+the media type says otherwise:
+
+```sh
+xh POST :3000/games/owned/$ID/roms \
+   title=='Chrono Trigger (USA).sfc' \
+   Content-Type:application/octet-stream \
+   Authorization:"Bearer $TOKEN" < 'Chrono Trigger (USA).sfc'
+```
 
 ## Organization
 

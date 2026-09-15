@@ -27,6 +27,13 @@ const uuid = customType<{ data: string; driverData: Buffer }>({
     },
 });
 
+/** Digests are stored as blobs and exposed as lowercase hexadecimal. */
+const hex = customType<{ data: string; driverData: Buffer }>({
+    dataType: () => "blob",
+    toDriver: (digest) => Buffer.from(digest, "hex"),
+    fromDriver: (raw) => Buffer.from(raw).toString("hex"),
+});
+
 /** Booleans are stored as the integers zero and one. */
 const flag = () => integer({ mode: "boolean" }).notNull();
 
@@ -116,6 +123,19 @@ export const games_owned_ref = sqliteTable(
     },
     (self) => [primaryKey({ columns: [self.owned, self.game] })],
 );
+
+export const games_owned_rom = sqliteTable("games_owned_rom", {
+    id: uuid().primaryKey(),
+    owned: uuid().notNull(),
+    title: text(),
+    size: integer().notNull(),
+    crc32: hex().notNull(),
+    md5: hex().notNull(),
+    sha1: hex().notNull(),
+    sha256: hex().notNull(),
+    dumped: integer().notNull(),
+    idx: integer().notNull(),
+});
 
 export const films = sqliteTable("films", {
     id: uuid().primaryKey(),
