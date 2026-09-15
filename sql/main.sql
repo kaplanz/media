@@ -1,5 +1,7 @@
+-- Media collection schema.
+
 -- Media
-CREATE TABLE media (
+CREATE TABLE IF NOT EXISTS media (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())) NOT NULL,
     kind    TEXT NOT NULL CHECK (
@@ -11,7 +13,7 @@ CREATE TABLE media (
 ) STRICT;
 
 -- Tags
-CREATE TABLE tags (
+CREATE TABLE IF NOT EXISTS tags (
     -- Relation
     media   BLOB NOT NULL REFERENCES media(id)
         ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -20,7 +22,7 @@ CREATE TABLE tags (
 ) STRICT;
 
 -- Logs
-CREATE TABLE logs (
+CREATE TABLE IF NOT EXISTS logs (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())) NOT NULL,
     media   BLOB NOT NULL REFERENCES media(id)
@@ -33,7 +35,7 @@ CREATE TABLE logs (
 --
 -- Books
 --
-CREATE TABLE books (
+CREATE TABLE IF NOT EXISTS books (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid()))
         REFERENCES media(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -47,7 +49,7 @@ CREATE TABLE books (
 ) STRICT;
 
 -- Owned
-CREATE TABLE books_owned (
+CREATE TABLE IF NOT EXISTS books_owned (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())) NOT NULL,
     isbn    TEXT NOT NULL CHECK(length(isbn) = 13),
@@ -56,10 +58,10 @@ CREATE TABLE books_owned (
     edition TEXT
 ) STRICT;
 
-CREATE INDEX books_owned_isbn ON books_owned(isbn);
+CREATE INDEX IF NOT EXISTS books_owned_isbn ON books_owned(isbn);
 
 -- Author
-CREATE TABLE books_author (
+CREATE TABLE IF NOT EXISTS books_author (
     -- Relation
     book    BLOB NOT NULL REFERENCES books(id)
         ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -72,7 +74,7 @@ CREATE TABLE books_author (
 --
 -- Links
 --
-CREATE TABLE links (
+CREATE TABLE IF NOT EXISTS links (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid()))
         REFERENCES media(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -84,7 +86,7 @@ CREATE TABLE links (
 --
 -- Games
 --
-CREATE TABLE games (
+CREATE TABLE IF NOT EXISTS games (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid()))
         REFERENCES media(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -96,7 +98,7 @@ CREATE TABLE games (
 ) STRICT;
 
 -- Owned
-CREATE TABLE games_owned (
+CREATE TABLE IF NOT EXISTS games_owned (
     -- Identity
     id       BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())) NOT NULL,
     kind     TEXT NOT NULL CHECK (
@@ -117,7 +119,7 @@ CREATE TABLE games_owned (
 ) STRICT;
 
 -- Reference
-CREATE TABLE games_owned_ref (
+CREATE TABLE IF NOT EXISTS games_owned_ref (
     -- Relation
     owned    BLOB NOT NULL REFERENCES games_owned(id)
         ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -129,7 +131,7 @@ CREATE TABLE games_owned_ref (
 ) STRICT;
 
 -- ROM
-CREATE TABLE games_owned_rom (
+CREATE TABLE IF NOT EXISTS games_owned_rom (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid())) NOT NULL,
     owned   BLOB NOT NULL REFERENCES games_owned(id)
@@ -148,13 +150,13 @@ CREATE TABLE games_owned_rom (
     idx     INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
-CREATE INDEX games_owned_rom_owned ON games_owned_rom(owned);
-CREATE INDEX games_owned_rom_sha1  ON games_owned_rom(sha1);
+CREATE INDEX IF NOT EXISTS games_owned_rom_owned ON games_owned_rom(owned);
+CREATE INDEX IF NOT EXISTS games_owned_rom_sha1  ON games_owned_rom(sha1);
 
 --
 -- Films
 --
-CREATE TABLE films (
+CREATE TABLE IF NOT EXISTS films (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid()))
         REFERENCES media(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -169,7 +171,7 @@ CREATE TABLE films (
 --
 -- Shows
 --
-CREATE TABLE shows (
+CREATE TABLE IF NOT EXISTS shows (
     -- Identity
     id      BLOB PRIMARY KEY DEFAULT (uuid_blob(uuid()))
         REFERENCES media(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
