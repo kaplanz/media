@@ -12,6 +12,7 @@ import {
     BY_KIND,
     choice,
     define,
+    disposal,
     ident,
     nullable,
     page,
@@ -43,6 +44,7 @@ const FIELDS: Fields = {
     isbn: str("ISBN-13."),
     title: nullable(t.String(), "Title."),
     edition: nullable(t.String(), "Edition."),
+    sold: nullable(t.Integer(), "Sold date (Unix seconds)."),
 };
 
 const COLUMNS = Object.keys(FIELDS).filter((name) => name !== "id");
@@ -87,6 +89,7 @@ export function router(cxn: db.Cxn) {
             t.String({ description: "Search title (case-insensitive substring)." }),
         ),
         isbn: t.Optional(t.String({ description: "Filter by ISBN-13." })),
+        sold: disposal,
         sort: choice(["isbn", "title", "edition"], "Field to sort by."),
         ...page,
     });
@@ -142,6 +145,7 @@ export function router(cxn: db.Cxn) {
                     args.isbn
                         ? eq(schema.books_owned.isbn, args.isbn)
                         : undefined,
+                    db.disposed(schema.books_owned.sold, args.sold),
                 ];
 
                 // Sort and paginate

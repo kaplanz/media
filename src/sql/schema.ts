@@ -75,6 +75,7 @@ export const books_owned = sqliteTable("books_owned", {
     isbn: text().notNull(),
     title: text(),
     edition: text(),
+    sold: integer(),
 });
 
 export const books_author = sqliteTable(
@@ -112,6 +113,7 @@ export const games_owned = sqliteTable("games_owned", {
     variant: text(),
     complete: flag(),
     modified: flag(),
+    sold: integer(),
 });
 
 export const games_owned_ref = sqliteTable(

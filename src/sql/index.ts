@@ -2,8 +2,9 @@
 
 import { Database } from "bun:sqlite";
 
-import { eq } from "drizzle-orm";
+import { eq, isNotNull, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import ddl from "../../sql/main.sql" with { type: "text" };
 import * as schema from "./schema";
@@ -37,6 +38,17 @@ export function open(url: string): ReturnType<typeof drizzle> {
  * result type does not surface.
  */
 export const affected = (res: unknown) => (res as { changes: number }).changes;
+
+/**
+ * Constrains a listing by disposal state.
+ *
+ * `no` keeps what is still held, `yes` keeps what has gone, and `any` places
+ * no constraint. An absent parameter behaves as `no`.
+ */
+export const disposed = (column: SQLiteColumn, given: string | undefined) => {
+    if (given === "any") return undefined;
+    return given === "yes" ? isNotNull(column) : isNull(column);
+};
 
 /** Returns the current Unix timestamp in seconds. */
 export const timestamp = () => Math.floor(Date.now() / 1000);

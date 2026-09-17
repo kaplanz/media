@@ -16,6 +16,7 @@ import {
     BY_KIND,
     choice,
     define,
+    disposal,
     ident,
     list,
     nullable,
@@ -80,6 +81,7 @@ const FIELDS: Fields = {
     variant: nullable(t.String(), "Variant."),
     complete: bool("Complete-in-box status."),
     modified: bool("Hardware modification status."),
+    sold: nullable(t.Integer(), "Sold date (Unix seconds)."),
 };
 
 /** Columns a request body may set. The kind comes from the path. */
@@ -148,6 +150,7 @@ export function router(cxn: db.Cxn, root: string) {
         hash: t.Optional(
             t.String({ description: "Filter by ROM digest." }),
         ),
+        sold: disposal,
         sort: choice(SORT, "Field to sort by."),
         ...page,
     };
@@ -235,6 +238,7 @@ export function router(cxn: db.Cxn, root: string) {
         game?: string | undefined;
         platform?: string | undefined;
         hash?: string | undefined;
+        sold?: string | undefined;
         sort?: string | undefined;
         order?: string | undefined;
         limit?: number | undefined;
@@ -274,6 +278,7 @@ export function router(cxn: db.Cxn, root: string) {
                 ? eq(schema.games_owned.platform, args.platform)
                 : undefined,
             digest,
+            db.disposed(schema.games_owned.sold, args.sold),
         ];
 
         // Sort and paginate

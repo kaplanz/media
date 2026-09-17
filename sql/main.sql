@@ -55,7 +55,9 @@ CREATE TABLE IF NOT EXISTS books_owned (
     isbn    TEXT NOT NULL CHECK(length(isbn) = 13),
     title   TEXT,
     -- Edition
-    edition TEXT
+    edition TEXT,
+    -- Disposal
+    sold    INTEGER
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS books_owned_isbn ON books_owned(isbn);
@@ -115,7 +117,9 @@ CREATE TABLE IF NOT EXISTS games_owned (
     variant  TEXT,
     -- Collection
     complete INTEGER NOT NULL DEFAULT 0 CHECK(complete IN (0, 1)),
-    modified INTEGER NOT NULL DEFAULT 0 CHECK(modified IN (0, 1))
+    modified INTEGER NOT NULL DEFAULT 0 CHECK(modified IN (0, 1)),
+    -- Disposal
+    sold     INTEGER
 ) STRICT;
 
 -- Reference

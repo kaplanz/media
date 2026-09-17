@@ -72,6 +72,19 @@ export const page = {
     offset: t.Optional(t.Integer({ description: "Number of results to skip." })),
 };
 
+/** Values the `sold` parameter admits. */
+export const SOLD = ["no", "yes", "any"] as const;
+
+/**
+ * Disposal filter, shared by every owned list endpoint.
+ *
+ * Absent means `no` rather than no constraint, so a listing counts what is
+ * still held. Every other filter passes everything through when omitted, and
+ * this is the deliberate exception, since a collection is what you have rather
+ * than everything you have ever had. Pass `any` to opt out.
+ */
+export const disposal = choice(SOLD, "Filter by sold status.");
+
 /**
  * Derives the item, body, and patch schemas for a set of columns.
  *

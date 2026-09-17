@@ -116,6 +116,13 @@ wrap the stored columns in an `item` object, beside the records they resolve:
   shorthand for a list of one. `hash=<hex>` narrows the list to the items
   holding a given dump, and each record carries its dumps under `roms`.
 
+Something sold, lost, or given away is still a record worth keeping, so `sold`
+carries the date it left and is empty while the thing is still held. Listings
+count what you have, so `sold` defaults to `no`, while `sold=yes` lists what
+has gone and `sold=any` lists everything. Fetching an item by its identifier
+ignores the filter, since a record asked for by name ought to answer. This is
+the only filter that constrains by being absent.
+
 A dumped ROM is a fact about the cartridge or disc held rather than about the
 game, so dumps hang off the owned item. The database records only the size, the
 dump date, and the CRC-32, MD5, SHA-1, and SHA-256 digests, served as lowercase
@@ -129,6 +136,12 @@ belongs, and `/games/owned/roms` lists every dump across the collection,
 filtered by `owned=<id>`, `hash=<hex>`, or `q=<text>` against the title. A
 hash names its own digest by width, so 8 hexadecimal characters is matched as a
 CRC-32, 32 as an MD5, 40 as a SHA-1, and 64 as a SHA-256.
+
+Dumps ignore disposal, since selling a cartridge does not delete the dump taken
+from it. The two hash searches therefore answer different questions.
+`/games/owned?hash=<hex>` asks whether the thing holding that dump is still
+held, and so respects `sold`. `/games/owned/roms?hash=<hex>` asks whether the
+dump exists at all, and so does not.
 
 Digests are computed once, when the bytes arrive, so listing costs an index
 read rather than a rehash. `present` reports whether the file is still in the
